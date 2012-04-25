@@ -1,6 +1,6 @@
 # Scaliak
 
-Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functional Twist.
+Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functional Twist. It is currently being used in production at StackMob.
 
 ## Status
 
@@ -19,6 +19,7 @@ The following is supported:
 
 The following is missing:
 
+  - retriers (coming soon)
   - Convenience methods for creating pbc or default http clients
   - ReadObject is not 1-1 with IRiakObject
   - cannot specify delete meta (coming soon)
@@ -30,7 +31,7 @@ The following is missing:
 
 ## Design
 
-The High-Level Riak Java Client developed by Basho has a great model for working with data stored in Riak. However, it can be a bit cumbersome to use from Scala where a library written for the language can provide a more concise interface. 
+The [High-Level Riak Java Client](https://github.com/basho/riak-java-client) developed by Basho has a great model for working with data stored in Riak. However, it can be a bit cumbersome to use from Scala where a library written for the language can provide a more concise interface. 
 
 The Riak Java Client uses the concept of a `Converter`, `Resolver`, and `Mutation` to work with your Riak data. The `Converter` allows for conversion of domain objects and the `Resolver` provides an interface for conflict resolution in your domain. Since you don't know whether the data you are writing to data already exists, the `Mutation` provides an interface for how to insert/update data given the possibly existing data. 
 
@@ -56,9 +57,15 @@ All `IO` actions returned are setup to handle any exception thrown in the proces
 
 ## Usage
 
-For examples please see the `examples` package: https://github.com/stackmob/scaliak/tree/master/src/main/scala/com/stackmob/scaliak/example. More documentation a real examples project (instead of a package) are coming soon.
+For examples please [see the `examples` package](https://github.com/stackmob/scaliak/tree/master/src/main/scala/com/stackmob/scaliak/example). More documentation and a real examples project (instead of a package) are coming soon.
 
 ## Contributing
+
+is easy!
+
+* Fork the code
+* Make your changes
+* Submit a pull request
 
 ## License
 
