@@ -12,7 +12,7 @@ import effects._ // not necessary unless you want to take advantage of IO monad
  * Time: 2:00 PM 
  */
 
-class SomeDomainObject(val key: String, val value: String)
+case class SomeDomainObject(val key: String, val value: String)
 object SomeDomainObject {
 
   implicit val domainConverter: ScaliakConverter[SomeDomainObject] = ScaliakConverter.newConverter[SomeDomainObject](
@@ -25,7 +25,7 @@ object SomeDomainObject {
 object DomainObjects extends App {
   import SomeDomainObject._ // put the implicits at a higher priority scope
 
-  val client = Scaliak.httpClient("http://localhost:8091/riak")
+  val client = Scaliak.httpClient("http://127.0.0.1:8098/riak")
   client.generateAndSetClientId()
 
   val bucket = client.bucket("scaliak-example").unsafePerformIO match {

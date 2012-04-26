@@ -3,8 +3,16 @@ package com.stackmob.scaliak
 import scalaz._
 import Scalaz._
 import effects._
-import com.basho.riak.client.raw.RawClient
+
+import org.apache.commons.pool._
+import org.apache.commons.pool.impl._
+
 import java.io.IOException
+
+import com.basho.riak.client.raw.http.HTTPClientAdapter
+import com.basho.riak.client.raw.pbc.PBClientAdapter
+import com.basho.riak.client.raw.RawClient
+
 import com.basho.riak.client.http.response.RiakIORuntimeException
 import com.basho.riak.client.query.functions.{ NamedErlangFunction, NamedFunction }
 import scala.collection.JavaConversions._
@@ -12,19 +20,49 @@ import com.basho.riak.client.bucket.BucketProperties
 import com.basho.riak.client.raw.{ Transport ⇒ RiakTransport }
 import com.basho.riak.client.builders.BucketPropertiesBuilder
 
-/**
- * Created by IntelliJ IDEA.
- * User: jordanrw
- * Date: 12/8/11
- * Time: 10:03 PM
- */
 
-class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = None) {
+abstract class ScaliakClientPool {
+  def withClient[T](body: RawClient => T): T
+}
 
-  def listBuckets: IO[Set[String]] = {
-    rawClient.listBuckets().pure[IO] map { _.toSet }
+private class ScaliakPbClientFactory(host: String, port: Int) extends PoolableObjectFactory {
+  def makeObject = new PBClientAdapter(host, port) 
+
+  def destroyObject(sc: Object): Unit = { 
+	  sc.asInstanceOf[RawClient].shutdown
+	  // Methods for client destroying
   }
 
+  def passivateObject(sc: Object): Unit = {} 
+  def validateObject(sc: Object) = {
+    try {
+      //sc.asInstanceOf[RawClient].ping
+      true
+    }
+    catch {
+      case e => false 
+    }
+  }
+
+  def activateObject(sc: Object): Unit = {}
+}
+
+class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends ScaliakClientPool {
+  val pool = new StackObjectPool(new ScaliakPbClientFactory(host, port))
+  val secHTTPClient = new HTTPClientAdapter("http://" + host + ":" + httpPort + "/riak")
+  
+  override def toString = host + ":" + String.valueOf(port)
+
+  def withClient[T](body: RawClient => T): T = {
+    val client = pool.borrowObject.asInstanceOf[RawClient]
+    val response = body(client) 
+    pool.returnObject(client)
+    response
+  }
+
+  // close pool & free resources
+  def close = pool.close
+  
   def bucket(name: String,
              allowSiblings: AllowSiblingsArgument = AllowSiblingsArgument(),
              lastWriteWins: LastWriteWinsArgument = LastWriteWinsArgument(),
@@ -39,11 +77,10 @@ class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = Non
              notFoundOk: NotFoundOkArgument = NotFoundOkArgument()): IO[Validation[Throwable, ScaliakBucket]] = {
     val metaArgs = List(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
     val updateBucket = (metaArgs map { _.value.isDefined }).asMA.sum // update if more one or more arguments is passed in
-    val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
 
-    val fetchAction = bucketPropertyClient.fetchBucket(name).pure[IO]
+    val fetchAction = secHTTPClient.fetchBucket(name).pure[IO]
     val fullAction = if (updateBucket) {
-      bucketPropertyClient.updateBucket(name,
+      secHTTPClient.updateBucket(name,
         createUpdateBucketProps(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
       ).pure[IO] >>=| fetchAction
     } else {
@@ -60,45 +97,12 @@ class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = Non
       }
     } map { validation(_) }
   }
-
-  // this method causes side effects and may throw
-  // exceptions with the PBCAdapter
-  def clientId = Option {
-    val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
-    bucketPropertyClient.getClientId
-  }
-
-  def setClientId(id: Array[Byte]) = {
-    val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
-    bucketPropertyClient.setClientId(id)
-    this
-  }
-
-  def generateAndSetClientId(): Array[Byte] = {
-    val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
-    bucketPropertyClient.generateAndSetClientId()
-  }
-
-  def shutdown = {
-    if (isPb) {
-      secHTTPClient.get.shutdown
-      rawClient.shutdown
-    } else rawClient.shutdown
-  }
   
-  def ping = rawClient.ping
-
-  def transport = rawClient.getTransport
-
-  def isHttp = transport == RiakTransport.HTTP
-
-  def isPb = transport == RiakTransport.PB
-
   private def buildBucket(b: BucketProperties, name: String) = {
     val precommits = Option(b.getPrecommitHooks).cata(_.toArray.toSeq, Nil) map { _.asInstanceOf[NamedFunction] }
     val postcommits = Option(b.getPostcommitHooks).cata(_.toArray.toSeq, Nil) map { _.asInstanceOf[NamedErlangFunction] }
     new ScaliakBucket(
-      rawClientOrClientPool = Left(rawClient),
+      rawClientOrClientPool = Right(this),
       name = name,
       allowSiblings = b.getAllowSiblings,
       lastWriteWins = b.getLastWriteWins,
@@ -140,5 +144,4 @@ class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = Non
     alList.foreach { _ addToMeta builder }
     builder.build
   }
-
 }
