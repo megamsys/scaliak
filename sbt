@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCALA="-XX:MaxPermSize=256m -Xms1G -Xmx1G -Xss4M"
+SCALA="-XX:MaxPermSize=256m -Xms1G -Xmx1G -Xss8M"
 # More Optional Scala Opts
 # -XX:+UseTLAB -XX:+AggressiveOpts -XX:+UseFastAccessorMethods"
 
