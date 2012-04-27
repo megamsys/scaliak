@@ -1,7 +1,7 @@
 before_script:
   - curl -k -L -O http://typesafe.artifactoryonline.com/typesafe/ivy-releases/org.scala-tools.sbt/sbt-launch/0.11.2/sbt-launch.jar
 
-script: ./sbt ++$SCALA_VERSION test  
+script: ./sbt clean test  
 
 language: scala
 scala:
