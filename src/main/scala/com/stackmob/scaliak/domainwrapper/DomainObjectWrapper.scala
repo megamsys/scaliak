@@ -3,6 +3,7 @@ package domainwrapper
 
 import scalaz._
 import Scalaz._
+import linkwalk.LinkWalkStep
 
 // not necessary unless you want to take advantage of IO monad
 
