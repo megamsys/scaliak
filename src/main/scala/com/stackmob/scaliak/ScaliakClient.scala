@@ -3,6 +3,7 @@ package com.stackmob.scaliak
 import scalaz._
 import Scalaz._
 import effects._
+
 import com.basho.riak.client.raw.RawClient
 import java.io.IOException
 import com.basho.riak.client.http.response.RiakIORuntimeException
