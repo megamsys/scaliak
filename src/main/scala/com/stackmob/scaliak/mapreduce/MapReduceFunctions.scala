@@ -4,10 +4,10 @@ import com.basho.riak.pbc.mapreduce.JavascriptFunction._
 
 object MapReduceFunctions {
 	def mapValuesToJson(keep: Boolean = true) = MapPhase(named("Riak.mapValuesJson"), keep)
-	def mapValuesToJson:MapPhase = mapValuesToJson(true)
+	def mapValuesToJson:MapOrReducePhase = mapValuesToJson(true)
 	
 	def filterNotFound(keep: Boolean = true) = ReducePhase(named("Riak.filterNotFound"), keep)
-	def filterNotFound:ReducePhase = filterNotFound(true)
+	def filterNotFound:MapOrReducePhase = filterNotFound(true)
 	
 	def sort(field: String, sortDESC: Boolean = false, keep: Boolean = true) = ReducePhase(anon(""" 
 	function(values) {

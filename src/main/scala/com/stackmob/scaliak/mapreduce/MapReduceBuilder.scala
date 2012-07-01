@@ -62,17 +62,17 @@ object MapReduceBuilder {
   def buildPhase(phase: MapOrReducePhase) = {
     val phaseJson = new JSONObject
 
-    phase match {
-      case Left(mapPhase) ⇒ {
-        val functionJson = mapPhase.fn.toJson
-        functionJson.put("keep", mapPhase.keep)
-        if (mapPhase.arguments.isDefined) functionJson.put("arg", mapPhase.arguments.get)
+    phase.method match {
+      case x:MapMethod ⇒ {
+        val functionJson = phase.fn.toJson
+        functionJson.put("keep", phase.keep)
+        if (phase.arguments.isDefined) functionJson.put("arg", phase.arguments.get)
         phaseJson.put("map", functionJson)
       }
-      case Right(reducePhase) ⇒ {
-        val functionJson = reducePhase.fn.toJson
-        functionJson.put("keep", reducePhase.keep)
-        if (reducePhase.arguments.isDefined) functionJson.put("arg", reducePhase.arguments.get)
+      case x:ReduceMethod ⇒ {
+        val functionJson = phase.fn.toJson
+        functionJson.put("keep", phase.keep)
+        if (phase.arguments.isDefined) functionJson.put("arg", phase.arguments.get)
         phaseJson.put("reduce", functionJson)
       }
     }
@@ -85,7 +85,8 @@ object MapReduceBuilder {
     val phases = for (phase ← mrJob.mapReducePhasePipe.phases) yield {
       buildPhase(phase)
     }
-    val query = new JSONArray(phases.toArray)
+
+    val query = new JSONArray(phases.list.toArray)
     job.put("query", query)
     job.put("timeout", mrJob.timeOut)
     // TODO: Add Support for links and time-outs 
