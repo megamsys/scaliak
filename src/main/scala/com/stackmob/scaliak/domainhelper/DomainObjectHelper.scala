@@ -24,7 +24,7 @@ abstract class DomainObject {
 }
 
 abstract class DomainObjectHelper[T <: DomainObject](val clientPool: ScaliakPbClientPool, val proposedBucketName: Option[String] = None)(implicit mot: Manifest[T]) {
-  val clazz: Class[T] = classOf
+  val clazz: Class[T] = mot.erasure.asInstanceOf[Class[T]]
 
   val usermetaConverter: UsermetaConverter[T] = new UsermetaConverter[T]
   val riakIndexConverter: RiakIndexConverter[T] = new RiakIndexConverter[T]
@@ -152,7 +152,7 @@ abstract class DomainObjectHelper[T <: DomainObject](val clientPool: ScaliakPbCl
 
   def deleteWithKeys(keys: List[String]) = keys.foreach(key ⇒ delete(key))
 
-  def store(domainObject: T) = bucket.store(domainObject)
+  def store(domainObject: T) = bucket.store(domainObject, returnBody = true)
 
   def delete(domainObject: T) = bucket.delete(domainObject)
 
