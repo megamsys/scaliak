@@ -88,30 +88,28 @@ abstract class DomainObjectHelper[T <: DomainObject](val clientPool: ScaliakPbCl
 
   def fetch(key: String) = bucket.fetch(key)
 
-  implicit def mapReduceResultToRiakObjectIterable(mrr: MapReduceResult): Iterable[IRiakObject] = {
-    mrr.getResult(classOf[IRiakObject]).asScala
-  }
+  implicit def mapReduceResultToStringIterable(mrr: MapReduceResult) = mrr.getResult(classOf[String]).asScala
 
-  def fetchAsRiakObjects(keys: List[String]): IO[Validation[Throwable, Iterable[IRiakObject]]] = {
+  def fetchAsStrings(keys: List[String]): IO[Validation[Throwable, Iterable[String]]] = {
     val mrJob = MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson(false) |- filterNotFound),
       riakObjects = Some(Map(bucket.name -> keys.toSet)))
-    bucket.mapReduce(mrJob).map { _.map { mapReduceResultToRiakObjectIterable(_) } }
+    bucket.mapReduce(mrJob).map { _.map { _.getResult(classOf[String]).asScala } }
   }
 
   def fetch(keys: List[String]): IO[Iterable[T]] = {
     if (keys.length == 0) {
       Iterable[T]().pure[IO]
     } else {
-      fetchAsRiakObjects(keys).map { j ⇒
+      fetchAsStrings(keys).map { j ⇒
         j match {
-          case Success(s) ⇒ s map { domainConverter.read(_).toOption } filter { _.isDefined } map { _.get }
+          case Success(s) ⇒ s map { parseOpt(_) } filter { _.isDefined } map { _.get }
           case Failure(e) ⇒ Iterable[T]()
         }
       }
     }
   }
 
-  def fetchObjectsWithIndexByValueAsRiakObjects[V](index: String, value: V, sortField: Option[String] = None, sortDESC: Boolean = false): IO[Validation[Throwable, Iterable[IRiakObject]]] = {
+  def fetchObjectsWithIndexByValueAsStrings[V](index: String, value: V, sortField: Option[String] = None, sortDESC: Boolean = false): IO[Validation[Throwable, Iterable[String]]] = {
     val mrJob = value match {
       case x @ (_: Int | _: Range) ⇒ {
         val iv = x match {
@@ -138,13 +136,13 @@ abstract class DomainObjectHelper[T <: DomainObject](val clientPool: ScaliakPbCl
       case _ ⇒ throw new Exception("Unknown value type used")
     }
 
-    bucket.mapReduce(mrJob).map { _.map { mapReduceResultToRiakObjectIterable(_) } }
+    bucket.mapReduce(mrJob).map { _.map { mapReduceResultToStringIterable(_) } }
   }
 
   def fetchObjectsWithIndexByValue[V](index: String, value: V, sortField: Option[String] = None, sortDESC: Boolean = false): IO[Iterable[T]] = {
-    fetchObjectsWithIndexByValueAsRiakObjects(index, value, sortField, sortDESC).map { f ⇒
+    fetchObjectsWithIndexByValueAsStrings(index, value, sortField, sortDESC).map { f ⇒
       f match {
-        case Success(s) ⇒ s map { domainConverter.read(_).toOption } filter { _.isDefined } map { _.get }
+        case Success(s) ⇒ s map { parseOpt(_) } filter { _.isDefined } map { _.get }
         case Failure(e) ⇒ Iterable[T]()
       }
     }
@@ -161,4 +159,10 @@ abstract class DomainObjectHelper[T <: DomainObject](val clientPool: ScaliakPbCl
   def fetchKeysForIndexWithValue(idx: String, idv: String) = bucket.fetchIndexByValue(idx, idv)
 
   def fetchKeysForIndexWithValue(idx: String, idv: Int) = bucket.fetchIndexByValue(idx, idv)
+
+  def parseOpt(s: String): Option[T] = try {
+    Some(Json.parse(s))
+  } catch {
+    case e ⇒ None
+  }
 }
