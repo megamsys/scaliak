@@ -2,7 +2,7 @@ name := "scaliak"
 
 organization := "com.stackmob"
 
-version := "0.2-TYPECLASS"
+version := "0.2"
 
 scalaVersion := "2.9.2"
 
