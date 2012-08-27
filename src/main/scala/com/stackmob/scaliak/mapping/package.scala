@@ -27,21 +27,21 @@ package object mapping {
   
   def nonEmptyLinks(p: NonEmptyList[ScaliakLink] => Boolean = (s => true))(obj: ReadObject): ValidationNEL[Throwable, NonEmptyList[ScaliakLink]] =
     obj.links some { ls =>
-      if (p(ls)) ls.successNel[Throwable] else MappingError("links (non-empty)", ls).failNel
+      if (p(ls)) ls.successNel[Throwable] else MappingError("links (non-empty)", ls).failureNel
     } none {
-      MappingError("links (non-empty)", obj.links).failNel
+      MappingError("links (non-empty)", obj.links).failureNel
     }
   
   def riakMetadata(key: String, p: String => Boolean = (s => true))(obj: ReadObject): ValidationNEL[Throwable, String] =
     obj.getMetadata(key) some { v =>
-      if (p(v)) v.successNel[Throwable] else MetadataMappingError(key, v).failNel
+      if (p(v)) v.successNel[Throwable] else MetadataMappingError(key, v).failureNel
     } none {
-      MissingMetadataMappingError(key).failNel
+      MissingMetadataMappingError(key).failureNel
     }
 
   private[mapping] def readValue[T](name: String, pf: T => Boolean, vf: ReadObject => T, obj: ReadObject): ValidationNEL[Throwable, T] = {
     val value = vf(obj)
-    if (pf(value)) value.successNel else (MappingError(name, value)).failNel
+    if (pf(value)) value.successNel else (MappingError(name, value)).failureNel
   }
 
   implicit def Func1Lift[A, T](f: A => T) = new {

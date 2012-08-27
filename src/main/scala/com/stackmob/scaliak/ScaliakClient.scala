@@ -2,7 +2,7 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-import effects._
+import effect._
 
 import com.basho.riak.client.raw.RawClient
 import java.io.IOException
@@ -23,7 +23,7 @@ import com.basho.riak.client.builders.BucketPropertiesBuilder
 class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = None) {
 
   def listBuckets: IO[Set[String]] = {
-    rawClient.listBuckets().pure[IO] map { _.toSet }
+    rawClient.listBuckets().point[IO] map { _.toSet }
   }
 
   def bucket(name: String,
@@ -39,14 +39,16 @@ class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = Non
              basicQuorum: BasicQuorumArgument = BasicQuorumArgument(),
              notFoundOk: NotFoundOkArgument = NotFoundOkArgument()): IO[Validation[Throwable, ScaliakBucket]] = {
     val metaArgs = List(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
-    val updateBucket = (metaArgs map { _.value.isDefined }).asMA.sum // update if more one or more arguments is passed in
+    implicit val bi = booleanInstance.disjunction
+
+    val updateBucket = (metaArgs map { _.value.isDefined }).concatenate // update if more one or more arguments is passed in
     val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
 
-    val fetchAction = bucketPropertyClient.fetchBucket(name).pure[IO]
+    val fetchAction = bucketPropertyClient.fetchBucket(name).point[IO]
     val fullAction = if (updateBucket) {
       bucketPropertyClient.updateBucket(name,
         createUpdateBucketProps(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
-      ).pure[IO] >>=| fetchAction
+      ).point[IO] >> fetchAction
     } else {
       fetchAction
     }
@@ -59,7 +61,10 @@ class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = Non
         case t: RiakIORuntimeException ⇒ t.getCause.some
         case _                         ⇒ none
       }
-    } map { validation(_) }
+    } map { _ match {
+      case Left(e) => e.failure
+      case Right(s) => s.success
+    }}
   }
 
   // this method causes side effects and may throw

@@ -39,8 +39,7 @@ object LinkWalkStep {
   }
 
   implicit def LinkWalkStepEqual: Equal[LinkWalkStep] =
-    equal((s1, s2) => s1.bucket === s2.bucket && s1.tag === s2.tag && s1.accumulate == s2.accumulate)
-  
+    Equal.equal((s1, s2) => s1.bucket === s2.bucket && s1.tag === s2.tag && s1.accumulate == s2.accumulate)
 }
 
 trait LinkWalkStepOperators {

@@ -172,5 +172,5 @@ case class ScaliakLink(bucket: String, key: String, tag: String)
 object ScaliakLink {
   implicit def riakLinkToScaliakLink(link: RiakLink): ScaliakLink = ScaliakLink(link.getBucket, link.getKey, link.getTag)
   
-  implicit def ScaliakLinkEqual: Equal[ScaliakLink] = equalA
+  implicit def ScaliakLinkEqual: Equal[ScaliakLink] = Equal.equalA
 }
