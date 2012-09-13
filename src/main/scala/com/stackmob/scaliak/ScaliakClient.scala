@@ -58,6 +58,9 @@ class ScaliakClient(rawClient: RawClient) {
     } map { validation(_) }
   }
 
+  def shutdown() {
+    rawClient.shutdown()
+  }
 
   // this method causes side effects and may throw
   // exceptions with the PBCAdapter
