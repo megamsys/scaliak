@@ -129,11 +129,11 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
 
     val key = converter.write(obj)._key
     (for {
-      resp ← rawFetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock)
-      fetchRes ← riakResponseToResult(resp).point[IO]
+      resp <- rawFetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock)
+      fetchRes <- riakResponseToResult(resp).point[IO]
     } yield {
       fetchRes flatMap {
-        mbFetched ⇒ {
+        mbFetched => {
           val objToStore = converter.write(mutator(mbFetched, obj)).asRiak(name, resp.getVclock)
           val storeMeta = prepareStoreMeta(w, pw, dw, returnBody)
           if (ifNoneMatch) storeMeta.etags(Array(objToStore.getVtag))
@@ -142,15 +142,15 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
           riakResponseToResult {
             retrier[com.basho.riak.client.raw.RiakResponse] {
               rawClientOrClientPool match {
-                case Left(client) ⇒ client.store(objToStore, storeMeta)
-                case Right(pool) ⇒ pool.withClient[RiakResponse](_.store(objToStore, storeMeta))
+                case Left(client) => client.store(objToStore, storeMeta)
+                case Right(pool) => pool.withClient[RiakResponse](_.store(objToStore, storeMeta))
               }
             }
           }
         }
       }
     }) except {
-      t ⇒ t.failureNel.point[IO]
+      t => t.failureNel.point[IO]
     }
   }
 
@@ -167,8 +167,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
              returnBody: ReturnBodyArgument = ReturnBodyArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
     retrier[IO[com.basho.riak.client.raw.RiakResponse]] {
       rawClientOrClientPool match {
-        case Left(client) ⇒ client.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody)).pure[IO]
-        case Right(pool) ⇒ pool.withClient[RiakResponse](_.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody))).pure[IO]
+        case Left(client) => client.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody)).pure[IO]
+        case Right(pool) => pool.withClient[RiakResponse](_.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody))).pure[IO]
       }
     } map {
       riakResponseToResult(_)
@@ -194,24 +194,24 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     val mbFetchHead = {
       if (fetchBefore) {
         rawClientOrClientPool match {
-          case Left(client) ⇒ client.head(name, key, emptyFetchMeta).point[Option].point[IO]
-          case Right(pool) ⇒ pool.withClient[RiakResponse](_.head(name, key, emptyFetchMeta)).point[Option].point[IO]
+          case Left(client) => client.head(name, key, emptyFetchMeta).point[Option].point[IO]
+          case Right(pool) => pool.withClient[RiakResponse](_.head(name, key, emptyFetchMeta)).point[Option].point[IO]
         }
       } else none.point[IO]
     }
 
     val result = (for {
-      mbHeadResponse ← mbFetchHead
-      deleteMeta ← retrier[IO[com.basho.riak.client.raw.DeleteMeta]](prepareDeleteMeta(mbHeadResponse, deleteMetaBuilder).pure[IO])
-      _ ← {
+      mbHeadResponse <- mbFetchHead
+      deleteMeta <- retrier[IO[com.basho.riak.client.raw.DeleteMeta]](prepareDeleteMeta(mbHeadResponse, deleteMetaBuilder).pure[IO])
+      _ <- {
         rawClientOrClientPool match {
-          case Left(client) ⇒ client.delete(name, key, deleteMeta).point[IO]
-          case Right(pool) ⇒ pool.withClient[Unit](_.delete(name, key, deleteMeta)).point[IO]
+          case Left(client) => client.delete(name, key, deleteMeta).point[IO]
+          case Right(pool) => pool.withClient[Unit](_.delete(name, key, deleteMeta)).point[IO]
         }
       }
     } yield ().success[Throwable])
     result except {
-      t ⇒ t.failure.point[IO]
+      t => t.failure.point[IO]
     }
   }
 
@@ -220,10 +220,10 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
   // This method discards any objects that have conversion errors
   def linkWalk[T](obj: ReadObject, steps: LinkWalkSteps)(implicit converter: ScaliakConverter[T]): IO[Iterable[Iterable[T]]] = {
     for {
-      walkResult ← {
+      walkResult <- {
         rawClientOrClientPool match {
-          case Left(client) ⇒ client.linkWalk(generateLinkWalkSpec(name, obj.key, steps)).point[IO]
-          case Right(pool) ⇒ pool.withClient[com.basho.riak.client.query.WalkResult](_.linkWalk(generateLinkWalkSpec(name, obj.key, steps))).point[IO]
+          case Left(client) => client.linkWalk(generateLinkWalkSpec(name, obj.key, steps)).point[IO]
+          case Right(pool) => pool.withClient[com.basho.riak.client.query.WalkResult](_.linkWalk(generateLinkWalkSpec(name, obj.key, steps))).point[IO]
         }
       }
     } yield {
@@ -247,8 +247,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     val spec = generateMapReduceSpec(jobAsJSON.toString)
     retrier {
       rawClientOrClientPool match {
-        case Left(client) ⇒ client.mapReduce(spec).point[IO]
-        case Right(pool) ⇒ pool.withClient[com.basho.riak.client.query.MapReduceResult](_.mapReduce(spec)).point[IO]
+        case Left(client) => client.mapReduce(spec).point[IO]
+        case Right(pool) => pool.withClient[com.basho.riak.client.query.MapReduceResult](_.mapReduce(spec)).point[IO]
       }
     }.map(_.success[Throwable])
       .except {
@@ -274,10 +274,10 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
 
   private def fetchValueIndex(query: IndexQuery): IO[Validation[Throwable, List[String]]] = {
     rawClientOrClientPool match {
-      case Left(client) ⇒ client.fetchIndex(query).point[IO].map(_.asScala.toList.success[Throwable]).except {
+      case Left(client) => client.fetchIndex(query).point[IO].map(_.asScala.toList.success[Throwable]).except {
         _.failure.point[IO]
       }
-      case Right(pool) ⇒ pool.withClient[java.util.List[java.lang.String]](_.fetchIndex(query)).point[IO].map(_.asScala.toList.success[Throwable]).except {
+      case Right(pool) => pool.withClient[java.util.List[java.lang.String]](_.fetchIndex(query)).point[IO].map(_.asScala.toList.success[Throwable]).except {
         _.failure.point[IO]
       }
     }
@@ -296,8 +296,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
 
     retrier[IO[com.basho.riak.client.raw.RiakResponse]] {
       rawClientOrClientPool match {
-        case Left(client) ⇒ client.fetch(name, key, fetchMetaBuilder.build).point[IO]
-        case Right(pool) ⇒ pool.withClient[RiakResponse](_.fetch(name, key, fetchMetaBuilder.build)).point[IO]
+        case Left(client) => client.fetch(name, key, fetchMetaBuilder.build).point[IO]
+        case Right(pool) => pool.withClient[RiakResponse](_.fetch(name, key, fetchMetaBuilder.build)).point[IO]
       }
     }
   }
@@ -306,7 +306,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     ((r.getRiakObjects map {
       converter.read(_)
     }).toList.toNel map {
-      sibs ⇒
+      sibs =>
         resolver(sibs)
     }).sequence[ScaliakConverter[T]#ReadResult, T]
   }
@@ -319,17 +319,17 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
 
   private def prepareDeleteMeta(mbResponse: Option[RiakResponse], deleteMetaBuilder: DeleteMeta.Builder) = {
     val mbPrepared = for {
-      response ← mbResponse
-      vClock ← Option(response.getVclock)
+      response <- mbResponse
+      vClock <- Option(response.getVclock)
     } yield deleteMetaBuilder.vclock(vClock)
     (mbPrepared | deleteMetaBuilder).build
   }
 
-  private def retrier[R](f: ⇒ R, attempts: Int = 3): R = {
+  private def retrier[R](f: => R, attempts: Int = 3): R = {
     try {
       f
     } catch {
-      case e ⇒ {
+      case e => {
         if (attempts == 0) {
           throw e
         } else {
@@ -354,16 +354,16 @@ object ScaliakConverter extends ScaliakConverters {
 
 trait ScaliakConverters {
 
-  def newConverter[T](r: ReadObject ⇒ ValidationNEL[Throwable, T], w: T ⇒ WriteObject) = new ScaliakConverter[T] {
+  def newConverter[T](r: ReadObject => ValidationNEL[Throwable, T], w: T => WriteObject) = new ScaliakConverter[T] {
     def read(o: ReadObject) = r(o)
 
     def write(o: T) = w(o)
   }
 
   lazy val PassThroughConverter = newConverter[ReadObject](
-    ((o: ReadObject) ⇒
+    ((o: ReadObject) =>
       o.successNel[Throwable]),
-    ((o: ReadObject) ⇒
+    ((o: ReadObject) =>
       WriteObject(key = o.key, value = o.bytes, contentType = o.contentType,
         links = o.links, metadata = o.metadata, binIndexes = o.binIndexes, intIndexes = o.intIndexes,
         vTag = o.vTag, lastModified = o.lastModified)))
@@ -378,14 +378,14 @@ sealed trait ScaliakResolver[T] {
 object ScaliakResolver extends ScaliakResolvers {
 
   implicit def DefaultResolver[T] = newResolver[T](
-    siblings ⇒
+    siblings =>
       if (siblings.count == 1) siblings.head
       else throw new UnresolvedConflictException(null, "there were siblings", siblings.list.asJavaCollection))
 
 }
 
 trait ScaliakResolvers {
-  def newResolver[T](resolve: NonEmptyList[ValidationNEL[Throwable, T]] ⇒ ValidationNEL[Throwable, T]) = new ScaliakResolver[T] {
+  def newResolver[T](resolve: NonEmptyList[ValidationNEL[Throwable, T]] => ValidationNEL[Throwable, T]) = new ScaliakResolver[T] {
     def apply(siblings: NonEmptyList[ValidationNEL[Throwable, T]]) = resolve(siblings)
   }
 }
@@ -402,11 +402,11 @@ object ScaliakMutation extends ScaliakMutators {
 
 trait ScaliakMutators {
 
-  def newMutation[T](mutate: (Option[T], T) ⇒ T) = new ScaliakMutation[T] {
+  def newMutation[T](mutate: (Option[T], T) => T) = new ScaliakMutation[T] {
     def apply(o: Option[T], n: T) = mutate(o, n)
   }
 
-  def ClobberMutation[T] = newMutation((o: Option[T], n: T) ⇒ n)
+  def ClobberMutation[T] = newMutation((o: Option[T], n: T) => n)
 
 }
 

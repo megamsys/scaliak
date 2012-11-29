@@ -10,7 +10,7 @@ import com.basho.riak.client.http.response.RiakIORuntimeException
 import com.basho.riak.client.query.functions.{ NamedErlangFunction, NamedFunction }
 import scala.collection.JavaConversions._
 import com.basho.riak.client.bucket.BucketProperties
-import com.basho.riak.client.raw.{ Transport ⇒ RiakTransport }
+import com.basho.riak.client.raw.{ Transport => RiakTransport }
 import com.basho.riak.client.builders.BucketPropertiesBuilder
 
 /**
@@ -54,12 +54,12 @@ class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = Non
     }
 
     (for {
-      b ← fullAction
-    } yield buildBucket(b, name)) catchSomeLeft { (t: Throwable) ⇒
+      b <- fullAction
+    } yield buildBucket(b, name)) catchSomeLeft { (t: Throwable) =>
       t match {
-        case t: IOException            ⇒ t.some
-        case t: RiakIORuntimeException ⇒ t.getCause.some
-        case _                         ⇒ none
+        case t: IOException            => t.some
+        case t: RiakIORuntimeException => t.getCause.some
+        case _                         => none
       }
     } map { _ match {
       case Left(e) => e.failure

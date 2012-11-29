@@ -16,14 +16,14 @@ case class FileObject(key: String, value: Array[Byte])
 abstract class FileObjectHelper(val clientPool: ScaliakPbClientPool, val proposedBucketName: Option[String] = None) {
 
   implicit val fileDomainConverter: ScaliakConverter[FileObject] = ScaliakConverter.newConverter[FileObject](
-    (o: ReadObject) ⇒ new FileObject(o.key, o.getBytes).successNel,
-    (o: FileObject) ⇒ WriteObject(o.key, o.value))
+    (o: ReadObject) => new FileObject(o.key, o.getBytes).successNel,
+    (o: FileObject) => WriteObject(o.key, o.value))
 
   val rawFileBucketName = proposedBucketName.getOrElse("file_storage")
 
   val rawFileBucket = clientPool.bucket(rawFileBucketName).unsafePerformIO match {
-    case Success(b: ScaliakBucket) ⇒ b
-    case Failure(e: Throwable) ⇒ throw e
+    case Success(b: ScaliakBucket) => b
+    case Failure(e: Throwable) => throw e
   }
 
   def fetchAsByteArray(k: String): IO[ValidationNEL[Throwable, Option[Array[Byte]]]] = fetch(k) 

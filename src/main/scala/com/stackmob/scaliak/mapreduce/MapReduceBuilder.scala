@@ -38,8 +38,8 @@ object MapReduceBuilder {
       jobInputs.put("bucket", mrJob.intIndex.get.bucket)
       jobInputs.put("index", mrJob.intIndex.get.idx + "_int")
       mrJob.intIndex.get.idv match {
-        case Left(int) ⇒ jobInputs.put("key", int)
-        case Right(range) ⇒ {
+        case Left(int) => jobInputs.put("key", int)
+        case Right(range) => {
           jobInputs.put("start", range.start)
           jobInputs.put("end", range.end)
         }
@@ -48,8 +48,8 @@ object MapReduceBuilder {
     } 
     
     else if (mrJob.riakObjects.isDefined) {
-      val tupleList = mrJob.riakObjects.get.map { bucketToObjects ⇒
-        bucketToObjects._2.map(obj ⇒ new JSONArray(Array(bucketToObjects._1, obj)))
+      val tupleList = mrJob.riakObjects.get.map { bucketToObjects =>
+        bucketToObjects._2.map(obj => new JSONArray(Array(bucketToObjects._1, obj)))
       }
       new JSONArray(tupleList.flatten.toArray)
     } 
@@ -63,13 +63,13 @@ object MapReduceBuilder {
     val phaseJson = new JSONObject
 
     phase.method match {
-      case x:MapMethod ⇒ {
+      case x:MapMethod => {
         val functionJson = phase.fn.toJson
         functionJson.put("keep", phase.keep)
         if (phase.arguments.isDefined) functionJson.put("arg", phase.arguments.get)
         phaseJson.put("map", functionJson)
       }
-      case x:ReduceMethod ⇒ {
+      case x:ReduceMethod => {
         val functionJson = phase.fn.toJson
         functionJson.put("keep", phase.keep)
         if (phase.arguments.isDefined) functionJson.put("arg", phase.arguments.get)
@@ -82,7 +82,7 @@ object MapReduceBuilder {
   def toJSON(mrJob: MapReduceJob) = {
     val job = new JSONObject
     job.put("inputs", buildInputs(mrJob))
-    val phases = for (phase ← mrJob.mapReducePhasePipe.phases) yield {
+    val phases = for (phase <- mrJob.mapReducePhasePipe.phases) yield {
       buildPhase(phase)
     }
 
