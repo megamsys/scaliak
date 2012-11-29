@@ -2,7 +2,7 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-import effect._
+import effects._
 
 import org.apache.commons.pool._
 import org.apache.commons.pool.impl._
@@ -76,15 +76,14 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
              basicQuorum: BasicQuorumArgument = BasicQuorumArgument(),
              notFoundOk: NotFoundOkArgument = NotFoundOkArgument()): IO[Validation[Throwable, ScaliakBucket]] = {
     val metaArgs = List(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
-    implicit val bi = booleanInstance.disjunction
 
-    val updateBucket = (metaArgs map { _.value.isDefined }).concatenate // update if more one or more arguments is passed in
+    val updateBucket = (metaArgs map { _.value.isDefined }).asMA.sum // update if more one or more arguments is passed in
 
-    val fetchAction = secHTTPClient.fetchBucket(name).point[IO]
+    val fetchAction = secHTTPClient.fetchBucket(name).pure[IO]
     val fullAction = if (updateBucket) {
       secHTTPClient.updateBucket(name,
         createUpdateBucketProps(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
-      ).point[IO] >> fetchAction
+      ).pure[IO] >>=| fetchAction
     } else {
       fetchAction
     }
@@ -99,7 +98,7 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
         case _                         => none
       }
     } map { _ match {
-      case Left(e) => e.failure
+      case Left(e) => e.fail
       case Right(s) => s.success
     }}
   }

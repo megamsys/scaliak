@@ -3,7 +3,7 @@ package example
 
 import scalaz._
 import Scalaz._
-import effect._ // not necessary unless you want to take advantage of IO monad
+import effects._ // not necessary unless you want to take advantage of IO monad
 
 /**
  * Created by IntelliJ IDEA.
@@ -44,17 +44,17 @@ object BasicUsage extends App {
     case Success(mbFetched) => {
       println(
         mbFetched some { "fetched: " + _.stringValue } none { "key does not exist" }
-      ).point[IO]
+      ).pure[IO]
     }
     case Failure(es) => {
-      (es foreach println).point[IO]
+      (es foreach println).pure[IO]
     } 
   }
 
   val originalResult = for {
     mbFetchedOrErrors <- bucket.fetch(key)
     _ <- printFetchRes(mbFetchedOrErrors)
-    _ <- println("deleting").point[IO]
+    _ <- println("deleting").pure[IO]
     _ <- bucket.deleteByKey(key)
   } yield (mbFetchedOrErrors.toOption | none)
   println(originalResult.unsafePerformIO)

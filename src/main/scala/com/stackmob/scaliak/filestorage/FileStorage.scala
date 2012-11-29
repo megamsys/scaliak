@@ -2,7 +2,7 @@ package com.stackmob.scaliak.filestorage
 
 import scalaz._
 import Scalaz._
-import effect._
+import effects._
 
 import java.io.{ FileInputStream, File, InputStream }
 import com.stackmob.scaliak.ScaliakConverter

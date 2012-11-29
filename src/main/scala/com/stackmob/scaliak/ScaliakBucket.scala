@@ -2,7 +2,7 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-import effect._
+import effects._
 import com.basho.riak.client.query.functions.{NamedFunction, NamedErlangFunction}
 import scala.collection.JavaConverters._
 import scala.collection.JavaConversions
@@ -66,7 +66,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
                ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
                ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
     fetchDangerous(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) except {
-      _.failureNel.point[IO]
+      _.failNel.pure[IO]
     }
 
   }
@@ -130,7 +130,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     val key = converter.write(obj)._key
     (for {
       resp <- rawFetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock)
-      fetchRes <- riakResponseToResult(resp).point[IO]
+      fetchRes <- riakResponseToResult(resp).pure[IO]
     } yield {
       fetchRes flatMap {
         mbFetched => {
@@ -150,7 +150,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
         }
       }
     }) except {
-      t => t.failureNel.point[IO]
+      t => t.failNel.pure[IO]
     }
   }
 
@@ -173,7 +173,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     } map {
       riakResponseToResult(_)
     } except {
-      _.failureNel.point[IO]
+      _.failNel.pure[IO]
     }
 
   }
@@ -194,10 +194,10 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     val mbFetchHead = {
       if (fetchBefore) {
         rawClientOrClientPool match {
-          case Left(client) => client.head(name, key, emptyFetchMeta).point[Option].point[IO]
-          case Right(pool) => pool.withClient[RiakResponse](_.head(name, key, emptyFetchMeta)).point[Option].point[IO]
+          case Left(client) => client.head(name, key, emptyFetchMeta).pure[Option].pure[IO]
+          case Right(pool) => pool.withClient[RiakResponse](_.head(name, key, emptyFetchMeta)).pure[Option].pure[IO]
         }
-      } else none.point[IO]
+      } else none.pure[IO]
     }
 
     val result = (for {
@@ -205,13 +205,13 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
       deleteMeta <- retrier[IO[com.basho.riak.client.raw.DeleteMeta]](prepareDeleteMeta(mbHeadResponse, deleteMetaBuilder).pure[IO])
       _ <- {
         rawClientOrClientPool match {
-          case Left(client) => client.delete(name, key, deleteMeta).point[IO]
-          case Right(pool) => pool.withClient[Unit](_.delete(name, key, deleteMeta)).point[IO]
+          case Left(client) => client.delete(name, key, deleteMeta).pure[IO]
+          case Right(pool) => pool.withClient[Unit](_.delete(name, key, deleteMeta)).pure[IO]
         }
       }
     } yield ().success[Throwable])
     result except {
-      t => t.failure.point[IO]
+      t => t.fail.pure[IO]
     }
   }
 
@@ -222,8 +222,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     for {
       walkResult <- {
         rawClientOrClientPool match {
-          case Left(client) => client.linkWalk(generateLinkWalkSpec(name, obj.key, steps)).point[IO]
-          case Right(pool) => pool.withClient[com.basho.riak.client.query.WalkResult](_.linkWalk(generateLinkWalkSpec(name, obj.key, steps))).point[IO]
+          case Left(client) => client.linkWalk(generateLinkWalkSpec(name, obj.key, steps)).pure[IO]
+          case Right(pool) => pool.withClient[com.basho.riak.client.query.WalkResult](_.linkWalk(generateLinkWalkSpec(name, obj.key, steps))).pure[IO]
         }
       }
     } yield {
@@ -247,12 +247,12 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     val spec = generateMapReduceSpec(jobAsJSON.toString)
     retrier {
       rawClientOrClientPool match {
-        case Left(client) => client.mapReduce(spec).point[IO]
-        case Right(pool) => pool.withClient[com.basho.riak.client.query.MapReduceResult](_.mapReduce(spec)).point[IO]
+        case Left(client) => client.mapReduce(spec).pure[IO]
+        case Right(pool) => pool.withClient[com.basho.riak.client.query.MapReduceResult](_.mapReduce(spec)).pure[IO]
       }
     }.map(_.success[Throwable])
       .except {
-      _.failure.point[IO]
+      _.fail.pure[IO]
     }
   }
 
@@ -274,11 +274,11 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
 
   private def fetchValueIndex(query: IndexQuery): IO[Validation[Throwable, List[String]]] = {
     rawClientOrClientPool match {
-      case Left(client) => client.fetchIndex(query).point[IO].map(_.asScala.toList.success[Throwable]).except {
-        _.failure.point[IO]
+      case Left(client) => client.fetchIndex(query).pure[IO].map(_.asScala.toList.success[Throwable]).except {
+        _.fail.pure[IO]
       }
-      case Right(pool) => pool.withClient[java.util.List[java.lang.String]](_.fetchIndex(query)).point[IO].map(_.asScala.toList.success[Throwable]).except {
-        _.failure.point[IO]
+      case Right(pool) => pool.withClient[java.util.List[java.lang.String]](_.fetchIndex(query)).pure[IO].map(_.asScala.toList.success[Throwable]).except {
+        _.fail.pure[IO]
       }
     }
   }
@@ -296,8 +296,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
 
     retrier[IO[com.basho.riak.client.raw.RiakResponse]] {
       rawClientOrClientPool match {
-        case Left(client) => client.fetch(name, key, fetchMetaBuilder.build).point[IO]
-        case Right(pool) => pool.withClient[RiakResponse](_.fetch(name, key, fetchMetaBuilder.build)).point[IO]
+        case Left(client) => client.fetch(name, key, fetchMetaBuilder.build).pure[IO]
+        case Right(pool) => pool.withClient[RiakResponse](_.fetch(name, key, fetchMetaBuilder.build)).pure[IO]
       }
     }
   }

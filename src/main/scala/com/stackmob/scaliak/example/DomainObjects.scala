@@ -3,7 +3,7 @@ package example
 
 import scalaz._
 import Scalaz._
-import effect._ // not necessary unless you want to take advantage of IO monad
+import effects._ // not necessary unless you want to take advantage of IO monad
 
 /**
  * Created by IntelliJ IDEA.
@@ -53,10 +53,10 @@ object DomainObjects extends App {
     case Success(mbFetched) => {
       println(
         mbFetched some { "fetched: " + _.toString } none { "key does not exist" }
-      ).point[IO]
+      ).pure[IO]
     }
     case Failure(es) => {
-      (es foreach println).point[IO]
+      (es foreach println).pure[IO]
     }
   }    
 
@@ -65,12 +65,12 @@ object DomainObjects extends App {
     (r.toOption | none) some { obj =>
       for {
         _ <- printFetchRes(r)
-        _ <- println("deleting").point[IO]
+        _ <- println("deleting").pure[IO]
         _ <- bucket.delete(obj)
-        _ <- println("deleted").point[IO]
+        _ <- println("deleted").pure[IO]
       } yield ()
     } none {
-      println("no object to delete").point[IO]
+      println("no object to delete").pure[IO]
     }
   }
   

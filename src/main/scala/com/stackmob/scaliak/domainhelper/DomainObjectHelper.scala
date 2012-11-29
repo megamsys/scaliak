@@ -2,21 +2,24 @@ package com.stackmob.scaliak.domainhelper
 
 import scalaz._
 import Scalaz._
-import effect._
+import effects._
 import com.stackmob.scaliak.mapreduce._
 import com.stackmob.scaliak.mapreduce.MapReduceFunctions._
 
 import com.stackmob.scaliak.ScaliakConverter
 import com.stackmob.scaliak.ScaliakPbClientPool
 import com.basho.riak.client.query.MapReduceResult
+import net.liftweb.json._
+import net.liftweb.json.JsonDSL._
+import net.liftweb.json.scalaz._
+import net.liftweb.json.scalaz.JsonScalaz._
+import net.liftweb.json._
+import net.liftweb.json.scalaz.JsonScalaz._
+import net.liftweb.json.JsonDSL._
+import net.liftweb.json.JsonAST.JValue
 
-import net.debasishg.sjson.json._
-import JsonSerialization._
-import DefaultProtocol._
-import dispatch.json.{JsValue, JsArray}
 
-
-abstract class DomainObjectHelper[T](val clientPool: ScaliakPbClientPool, val bucketname: String)(implicit domainConverter: ScaliakConverter[T], fmt: Format[T]) {
+abstract class DomainObjectHelper[T](val clientPool: ScaliakPbClientPool, val bucketname: String)(implicit domainConverter: ScaliakConverter[T], json: JSON[T]) {
   val bucket = clientPool.bucket(bucketname).unsafePerformIO match {
     case Success(b) => b
     case Failure(e) => throw e
@@ -24,14 +27,14 @@ abstract class DomainObjectHelper[T](val clientPool: ScaliakPbClientPool, val bu
 
   def fetch(key: String) = bucket.fetch(key)
 
-  implicit def mapReduceResultToObjectList(mrr: MapReduceResult) = frombinary[List[T]](mrr.getResultRaw.getBytes)
+  implicit def mapReduceResultToObjectList(mrr: MapReduceResult): Option[List[T]] = parseOpt(mrr.getResultRaw).flatMap(fromJSON[List[T]](_).toOption)
 
   def fetch(keys: List[String]): IO[List[T]] = {
     val mrJob = MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson(false) |- filterNotFound),
       riakObjects = Some(Map(bucket.name -> keys.toSet)))
     bucket.mapReduce(mrJob).map {
       _.map {
-        mapReduceResultToObjectList(_).toOption
+        mapReduceResultToObjectList(_)
       }
     } map {
       f =>
