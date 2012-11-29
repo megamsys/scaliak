@@ -20,7 +20,7 @@ import com.basho.riak.client.builders.BucketPropertiesBuilder
  */
 
 
-class ScaliakClient(rawClient: RawClient) {
+class ScaliakClient(rawClient: RawClientWithStreaming) {
   
   def listBuckets: IO[Set[String]] = {
     rawClient.listBuckets().pure[IO] map { _.toSet }
