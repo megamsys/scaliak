@@ -5,14 +5,9 @@ import Scalaz._
 import effects._
 import com.basho.riak.client.query.functions.{NamedFunction, NamedErlangFunction}
 import scala.collection.JavaConverters._
-import scala.collection.JavaConversions
 import com.basho.riak.client.cap.{UnresolvedConflictException, Quorum}
 import com.basho.riak.client.raw._
 import com.basho.riak.client.query.indexes.{BinIndex, IntIndex}
-import com.basho.riak.client.query.{MapReduce, BucketKeyMapReduce, BucketMapReduce}
-import com.basho.riak.pbc.mapreduce.{MapReduceBuilder, JavascriptFunction}
-import com.basho.riak.pbc.{RequestMeta, MapReduceResponseSource}
-import com.basho.riak.pbc.MapReduceResponseSource.readAllResults
 import query.indexes.{IntValueQuery, BinValueQuery, IndexQuery}
 import query.LinkWalkSpec
 import query.MapReduceSpec
@@ -227,14 +222,9 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
         }
       }
     } yield {
-      // this is kinda ridiculous
       walkResult.asScala map {
-        _.asScala map {
+        _.asScala flatMap {
           converter.read(_).toOption
-        } filter {
-          _.isDefined
-        } map {
-          _.get
         }
       } filterNot {
         _.isEmpty

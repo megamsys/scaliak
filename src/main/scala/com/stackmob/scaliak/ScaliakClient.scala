@@ -10,7 +10,6 @@ import com.basho.riak.client.http.response.RiakIORuntimeException
 import com.basho.riak.client.query.functions.{ NamedErlangFunction, NamedFunction }
 import scala.collection.JavaConversions._
 import com.basho.riak.client.bucket.BucketProperties
-import com.basho.riak.client.raw.{ Transport => RiakTransport }
 import com.basho.riak.client.builders.BucketPropertiesBuilder
 
 /**
@@ -21,6 +20,8 @@ import com.basho.riak.client.builders.BucketPropertiesBuilder
  */
 
 class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = None) {
+
+  private val bucketPropertyClient = secHTTPClient getOrElse rawClient
 
   def listBuckets: IO[Set[String]] = {
     rawClient.listBuckets().pure[IO] map { _.toSet }
@@ -41,7 +42,6 @@ class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = Non
     val metaArgs = List(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
 
     val updateBucket = (metaArgs map { _.value.isDefined }).asMA.sum // update if more one or more arguments is passed in
-    val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
 
     val fetchAction = bucketPropertyClient.fetchBucket(name).pure[IO]
 
@@ -70,35 +70,24 @@ class ScaliakClient(rawClient: RawClient, secHTTPClient: Option[RawClient] = Non
   // this method causes side effects and may throw
   // exceptions with the PBCAdapter
   def clientId = Option {
-    val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
     bucketPropertyClient.getClientId
   }
 
   def setClientId(id: Array[Byte]) = {
-    val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
     bucketPropertyClient.setClientId(id)
     this
   }
 
   def generateAndSetClientId(): Array[Byte] = {
-    val bucketPropertyClient = if (isPb) secHTTPClient.get else rawClient
     bucketPropertyClient.generateAndSetClientId()
   }
 
-  def shutdown = {
-    if (isPb) {
-      secHTTPClient.get.shutdown
-      rawClient.shutdown
-    } else rawClient.shutdown
+  def shutdown() {
+    secHTTPClient.foreach(_.shutdown())
+    rawClient.shutdown()
   }
   
-  def ping = rawClient.ping
-
-  def transport = rawClient.getTransport
-
-  def isHttp = transport == RiakTransport.HTTP
-
-  def isPb = transport == RiakTransport.PB
+  def ping() { rawClient.ping() }
 
   private def buildBucket(b: BucketProperties, name: String) = {
     val precommits = Option(b.getPrecommitHooks).cata(_.toArray.toSeq, Nil) map { _.asInstanceOf[NamedFunction] }

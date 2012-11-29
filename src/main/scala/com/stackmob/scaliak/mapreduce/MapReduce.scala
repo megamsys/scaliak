@@ -15,21 +15,21 @@ case class BinaryIndex(idx: String, idv: String, bucket: String)
 
 case class IntegerIndex(idx: String, idv: Either[Int, Range], bucket: String)
 
-case class MapReduceJob(val mapReducePhasePipe: MapReducePhasePipe,
-                         val searchQuery: Option[String] = None,
-                         val bucket: Option[String] = None,
-                         val riakObjects: Option[Map[String, Set[String]]] = None,
-                         val binIndex: Option[BinaryIndex] = None,
-                         val intIndex: Option[IntegerIndex] = None,
-                         val timeOut: Int = 60000)
+case class MapReduceJob(mapReducePhasePipe: MapReducePhasePipe,
+                        searchQuery: Option[String] = None,
+                        bucket: Option[String] = None,
+                        riakObjects: Option[Map[String, Set[String]]] = None,
+                        binIndex: Option[BinaryIndex] = None,
+                        intIndex: Option[IntegerIndex] = None,
+                        timeOut: Int = 60000)
 
 sealed trait MapReducePhasePipe {
-  val phases: MapOrReducePhases
+  def phases: MapOrReducePhases
 }
 
 object MapReducePhasePipe {
   def apply(p: MapOrReducePhases): MapReducePhasePipe = new MapReducePhasePipe {
-    val phases = p
+    override lazy val phases = p
   }
 
   def apply(p: MapOrReducePhase): MapReducePhasePipe = apply(p.wrapNel.asInstanceOf[MapOrReducePhases])

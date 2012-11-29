@@ -20,10 +20,7 @@ import net.liftweb.json.JsonAST.JValue
 
 
 abstract class DomainObjectHelper[T](val clientPool: ScaliakPbClientPool, val bucketname: String)(implicit domainConverter: ScaliakConverter[T], json: JSON[T]) {
-  val bucket = clientPool.bucket(bucketname).unsafePerformIO match {
-    case Success(b) => b
-    case Failure(e) => throw e
-  }
+  val bucket = clientPool.bucket(bucketname).unsafePerformIO ||| { throw _ }
 
   def fetch(key: String) = bucket.fetch(key)
 
@@ -33,15 +30,9 @@ abstract class DomainObjectHelper[T](val clientPool: ScaliakPbClientPool, val bu
     val mrJob = MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson(false) |- filterNotFound),
       riakObjects = Some(Map(bucket.name -> keys.toSet)))
     bucket.mapReduce(mrJob).map {
-      _.map {
-        mapReduceResultToObjectList(_)
+      ~_.toOption.map {
+        ~mapReduceResultToObjectList(_)
       }
-    } map {
-      f =>
-        f match {
-          case Success(s) => s getOrElse List[T]()
-          case Failure(e) => List[T]()
-        }
     }
   }
 
@@ -52,20 +43,18 @@ abstract class DomainObjectHelper[T](val clientPool: ScaliakPbClientPool, val bu
           case y: Int => Left(y)
           case y: Range => Right(y)
         }
-        val intIndex = Some(IntegerIndex(index, iv, bucket.name))
-        sortField.flatMap {
-          field =>
-            Some(MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson(false) |- sort(field, sortDESC)), intIndex = intIndex))
-        }.getOrElse {
+        val intIndex = IntegerIndex(index, iv, bucket.name).some
+        sortField.some { field =>
+          MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson(false) |- sort(field, sortDESC)), intIndex = intIndex)
+        } none {
           MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson), intIndex = intIndex)
         }
       }
       case x: String => {
-        val binIndex = Some(BinaryIndex(index, x, bucket.name))
-        sortField.flatMap {
-          field =>
-            Some(MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson(false) |- sort(field, sortDESC)), binIndex = binIndex))
-        }.getOrElse {
+        val binIndex = BinaryIndex(index, x, bucket.name).some
+        sortField.some { field =>
+          MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson(false) |- sort(field, sortDESC)), binIndex = binIndex)
+        } none {
           MapReduceJob(mapReducePhasePipe = MapReducePhasePipe(mapValuesToJson), binIndex = binIndex)
         }
       }
@@ -73,15 +62,9 @@ abstract class DomainObjectHelper[T](val clientPool: ScaliakPbClientPool, val bu
     }
 
     bucket.mapReduce(mrJob).map {
-      _.map {
-        mapReduceResultToObjectList(_)
+      ~_.toOption.map {
+        ~mapReduceResultToObjectList(_)
       }
-    } map {
-      f =>
-        f match {
-          case Success(s) => s getOrElse List[T]()
-          case Failure(e) => List[T]()
-        }
     }
   }
 
