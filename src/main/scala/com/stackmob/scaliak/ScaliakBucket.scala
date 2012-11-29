@@ -45,6 +45,13 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
                     val linkWalkFunction: NamedErlangFunction,
                     val isSearchable: Boolean) {
 
+
+  def runOnClient[A](f: RawClient => A): A = {
+    rawClientOrClientPool match {
+      case Left(client) => f(client)
+      case Right(pool) => pool.withClient[A](f)
+    }
+  }
   /*
    * Creates an IO action that fetches as object by key
    * The action has built-in exception handling that
@@ -136,10 +143,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
 
           riakResponseToResult {
             retrier[com.basho.riak.client.raw.RiakResponse] {
-              rawClientOrClientPool match {
-                case Left(client) => client.store(objToStore, storeMeta)
-                case Right(pool) => pool.withClient[RiakResponse](_.store(objToStore, storeMeta))
-              }
+              runOnClient(_.store(objToStore, storeMeta))
             }
           }
         }
@@ -161,9 +165,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
              dw: DWArgument = DWArgument(),
              returnBody: ReturnBodyArgument = ReturnBodyArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
     retrier[IO[com.basho.riak.client.raw.RiakResponse]] {
-      rawClientOrClientPool match {
-        case Left(client) => client.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody)).pure[IO]
-        case Right(pool) => pool.withClient[RiakResponse](_.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody))).pure[IO]
+      runOnClient {
+        _.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody)).pure[IO]
       }
     } map {
       riakResponseToResult(_)
@@ -188,9 +191,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     val emptyFetchMeta = new FetchMeta.Builder().build()
     val mbFetchHead = {
       if (fetchBefore) {
-        rawClientOrClientPool match {
-          case Left(client) => client.head(name, key, emptyFetchMeta).pure[Option].pure[IO]
-          case Right(pool) => pool.withClient[RiakResponse](_.head(name, key, emptyFetchMeta)).pure[Option].pure[IO]
+        runOnClient {
+          _.head(name, key, emptyFetchMeta).pure[Option].pure[IO]
         }
       } else none.pure[IO]
     }
@@ -199,9 +201,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
       mbHeadResponse <- mbFetchHead
       deleteMeta <- retrier[IO[com.basho.riak.client.raw.DeleteMeta]](prepareDeleteMeta(mbHeadResponse, deleteMetaBuilder).pure[IO])
       _ <- {
-        rawClientOrClientPool match {
-          case Left(client) => client.delete(name, key, deleteMeta).pure[IO]
-          case Right(pool) => pool.withClient[Unit](_.delete(name, key, deleteMeta)).pure[IO]
+        runOnClient {
+          _.delete(name, key, deleteMeta).pure[IO]
         }
       }
     } yield ().success[Throwable])
@@ -216,10 +217,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
   def linkWalk[T](obj: ReadObject, steps: LinkWalkSteps)(implicit converter: ScaliakConverter[T]): IO[Iterable[Iterable[T]]] = {
     for {
       walkResult <- {
-        rawClientOrClientPool match {
-          case Left(client) => client.linkWalk(generateLinkWalkSpec(name, obj.key, steps)).pure[IO]
-          case Right(pool) => pool.withClient[com.basho.riak.client.query.WalkResult](_.linkWalk(generateLinkWalkSpec(name, obj.key, steps))).pure[IO]
-        }
+        runOnClient(_.linkWalk(generateLinkWalkSpec(name, obj.key, steps)).pure[IO])
       }
     } yield {
       walkResult.asScala map {
@@ -236,10 +234,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     val jobAsJSON = mapreduce.MapReduceBuilder.toJSON(job)
     val spec = generateMapReduceSpec(jobAsJSON.toString)
     retrier {
-      rawClientOrClientPool match {
-        case Left(client) => client.mapReduce(spec).pure[IO]
-        case Right(pool) => pool.withClient[com.basho.riak.client.query.MapReduceResult](_.mapReduce(spec)).pure[IO]
-      }
+      runOnClient(_.mapReduce(spec).pure[IO])
     }.map(_.success[Throwable])
       .except {
       _.fail.pure[IO]
@@ -263,11 +258,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
   }
 
   private def fetchValueIndex(query: IndexQuery): IO[Validation[Throwable, List[String]]] = {
-    rawClientOrClientPool match {
-      case Left(client) => client.fetchIndex(query).pure[IO].map(_.asScala.toList.success[Throwable]).except {
-        _.fail.pure[IO]
-      }
-      case Right(pool) => pool.withClient[java.util.List[java.lang.String]](_.fetchIndex(query)).pure[IO].map(_.asScala.toList.success[Throwable]).except {
+    runOnClient {
+      _.fetchIndex(query).pure[IO].map(_.asScala.toList.success[Throwable]).except {
         _.fail.pure[IO]
       }
     }
@@ -285,18 +277,14 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     List(r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) foreach { _ addToMeta fetchMetaBuilder }
 
     retrier[IO[com.basho.riak.client.raw.RiakResponse]] {
-      rawClientOrClientPool match {
-        case Left(client) => client.fetch(name, key, fetchMetaBuilder.build).pure[IO]
-        case Right(pool) => pool.withClient[RiakResponse](_.fetch(name, key, fetchMetaBuilder.build)).pure[IO]
-      }
+      runOnClient(_.fetch(name, key, fetchMetaBuilder.build).pure[IO])
     }
   }
 
   private def riakResponseToResult[T](r: RiakResponse)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNEL[Throwable, Option[T]] = {
     ((r.getRiakObjects map {
       converter.read(_)
-    }).toList.toNel map {
-      sibs =>
+    }).toList.toNel map { sibs =>
         resolver(sibs)
     }).sequence[ScaliakConverter[T]#ReadResult, T]
   }
