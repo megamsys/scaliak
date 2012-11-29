@@ -52,6 +52,21 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
       case Right(pool) => pool.withClient[A](f)
     }
   }
+
+  /**
+   * Warning: Basho advises not to run this operation in production
+   * without care because its extremely expensive
+   * 
+   * Lists all the keys in the bucket. A stream is returned to preserve
+   * the keys for subsequent iterations which wasn't always the case
+   * when backed by a streaming http response in the java client.
+   * This is more expensive but once again run this operation w/ care
+   *
+   */
+  def listKeys(): IO[Validation[Throwable, Stream[String]]] = {
+    rawClient.listKeys(name).pure[IO].map(_.asScala.toStream.success[Throwable]) except { e => e.fail[Stream[String]].pure[IO] } 
+  }
+
   /*
    * Creates an IO action that fetches as object by key
    * The action has built-in exception handling that
