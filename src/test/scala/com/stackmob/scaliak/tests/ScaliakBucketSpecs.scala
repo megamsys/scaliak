@@ -233,7 +233,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object fetchIndexByValue extends context {
-    val rawClient = mock[RawClient] // not used in these tests
+    val rawClient = mock[RawClientWithStreaming] // not used in these tests
     val bucket = createBucket // not used in these tests
 
     class IndexQueryExtractor extends util.MockitoArgumentExtractor[IndexQuery]
@@ -241,7 +241,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     val testIdx = "idx1"
 
     def testBinValueGeneratesBinQuery = {
-      val client = mock[RawClient]
+      val client = mock[RawClientWithStreaming]
       val b = createBucketWithClient(client)
       val testBinVal = "someval"
 
@@ -258,7 +258,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
 
     def testIntValueGeneratesIntQuery = {
-      val client = mock[RawClient]
+      val client = mock[RawClientWithStreaming]
       val b = createBucketWithClient(client)
       val testIntVal = 1
 
@@ -274,7 +274,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
     def testReturnsKeys = {
       import scala.collection.JavaConverters._
-      val client = mock[RawClient]
+      val client = mock[RawClientWithStreaming]
       val b = createBucketWithClient(client)
       val indexVal = "string"
       val testResults: java.util.List[String] = new java.util.LinkedList[String]()
@@ -290,7 +290,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object deleteWithFetchBefore extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     class DeleteMetaArgExtractor extends util.MockitoArgumentExtractor[DeleteMeta]
@@ -318,7 +318,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object deleteDomainObject extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     val obj = new DummyDomainObject(testKey)
@@ -332,7 +332,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object deleteScaliakObject extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     val obj = ReadObject(testKey, testBucket, testContentType, mock[VClock], "".getBytes)
@@ -345,7 +345,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object deleteByKey extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     lazy val result = bucket.deleteByKey(testKey).unsafePerformIO
@@ -450,7 +450,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
 
     def customMutator = {
-      val newRawClient = mock[RawClient]
+      val newRawClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newRawClient)
       newRawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockResponse
       val newExtractor = new IRiakObjExtractor
@@ -471,7 +471,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
 
     def domainObject = {
-      val newRawClient = mock[RawClient]
+      val newRawClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newRawClient)
       newRawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockResponse
 
@@ -487,7 +487,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
 
     def domainObjectCustomMutator = {
-      val newRawClient = mock[RawClient]
+      val newRawClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newRawClient)
       newRawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockResponse
 
@@ -516,7 +516,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     
     
     def customMutator = {
-      val newRawClient = mock[RawClient]
+      val newRawClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newRawClient)
       newRawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockResponse
       val newExtractor = new IRiakObjExtractor
@@ -537,7 +537,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
 
     def domainObject = {
-      val newRawClient = mock[RawClient]
+      val newRawClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newRawClient)
       newRawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockResponse
 
@@ -553,7 +553,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
 
     def domainObjectCustomMutator = {
-      val newRawClient = mock[RawClient]
+      val newRawClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newRawClient)
       newRawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockResponse
 
@@ -583,7 +583,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
 
     def usesPartialScaliakObjectVClock = {
-      val newRawClient = mock[RawClient]
+      val newRawClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newRawClient)
       newRawClient.store(MM.argThat(extractor), MM.isA(classOf[StoreMeta])) returns null
 
@@ -603,7 +603,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   trait writeBase extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
     def mockFetchVClockStr: String
     def extractor: IRiakObjExtractor
@@ -655,7 +655,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
   object riakArguments extends context {
     // these aren't really used
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
 
@@ -693,7 +693,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
     
     def testArg(f: ScaliakBucket => IO[ValidationNEL[Throwable, Option[ReadObject]]]): FetchMetaExtractor = {
-      val rawClient = mock[RawClient]
+      val rawClient = mock[RawClientWithStreaming]
       val ex = initExtractor(rawClient)
       val bucket = createBucketWithClient(rawClient)
       f(bucket).unsafePerformIO
@@ -701,7 +701,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
 
     def testWriteArg(f: ScaliakBucket => IO[ValidationNEL[Throwable, Option[ReadObject]]]): StoreMetaExtractor = {
-      val rawClient = mock[RawClient]
+      val rawClient = mock[RawClientWithStreaming]
       val ex = initWriteExtractor(rawClient)
       val bucket = createBucketWithClient(rawClient)
       f(bucket).unsafePerformIO
@@ -803,7 +803,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   
   object conflictedFetch extends context {
 
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     val mock1Bytes = Array[Byte](1, 2)
@@ -830,7 +830,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object nonEmptyMetadataFetch extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     val metadata = Map("m1" -> "v1", "m2" -> "v2")
@@ -876,7 +876,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object nonEmptyIntIndexesFetch extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     val indexes = Map("idx1" -> Set(1,2), "idx2" -> Set(3))
@@ -915,7 +915,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object nonEmptyBinIndexesFetch extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     val indexes = Map("idx1" -> Set("a", "b"), "idx2" -> Set("d"))
@@ -954,7 +954,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
   }
 
   object nonEmptyLinkFetch extends context {
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     val links = (new RiakLink(testBucket, "somekey", "tag")) :: (new RiakLink(testBucket, "somekey", "tag")) :: Nil
@@ -999,7 +999,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
   object simpleFetch extends context {
 
-    val rawClient = mock[RawClient]
+    val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
     val mock1Bytes = Array[Byte](1, 2)
@@ -1142,7 +1142,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
     
     def testDangerous = {
-      val newClient = mock[RawClient]
+      val newClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newClient)
       newClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) throws (new NullPointerException)
       newBucket.fetchDangerous(testKey).unsafePerformIO must throwA[NullPointerException]
@@ -1166,9 +1166,9 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     val testKey = "somekey"
     val testContentType = "text/plain"
 
-    def rawClient: RawClient
+    def rawClient: RawClientWithStreaming
 
-    def createBucketWithClient(r: RawClient) =  new ScaliakBucket(
+    def createBucketWithClient(r: RawClientWithStreaming) =  new ScaliakBucket(
       rawClientOrClientPool = Left(r),
       name = testBucket,
       allowSiblings = false,

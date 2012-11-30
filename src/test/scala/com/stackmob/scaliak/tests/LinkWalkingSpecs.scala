@@ -245,7 +245,7 @@ class LinkWalkingSpecs extends Specification with Mockito with util.MockRiakUtil
     }
 
     def createClientAndBucket: (RawClient, ScaliakBucket) = {
-      val rawClient = mock[RawClient]
+      val rawClient = mock[RawClientWithStreaming]
       val bucket = new ScaliakBucket(
         rawClientOrClientPool = Left(rawClient),
         name = lwsBucket,

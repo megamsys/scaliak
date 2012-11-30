@@ -29,7 +29,7 @@ private class ScaliakPbClientFactory(host: String, port: Int) extends PoolableOb
   def makeObject = new PBClientAdapter(host, port) 
 
   def destroyObject(sc: Object): Unit = { 
-	  sc.asInstanceOf[RawClient].shutdown
+	  sc.asInstanceOf[RawClientWithStreaming].shutdown
 	  // Methods for client destroying
   }
 
@@ -53,8 +53,8 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
   
   override def toString = host + ":" + String.valueOf(port)
 
-  def withClient[T](body: RawClient => T): T = {
-    val client = pool.borrowObject.asInstanceOf[RawClient]
+  def withClient[T](body: RawClientWithStreaming => T): T = {
+    val client = pool.borrowObject.asInstanceOf[RawClientWithStreaming]
     val response = body(client) 
     pool.returnObject(client)
     response
