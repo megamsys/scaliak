@@ -17,10 +17,7 @@ object BasicUsage extends App {
   val client = Scaliak.httpClient("http://localhost:8091/riak")
   client.generateAndSetClientId() // always calls this or setClientId(Array[Byte]) after creating a client
 
-  val bucket = client.bucket("scaliak-example").unsafePerformIO match {
-    case Success(b) => b
-    case Failure(e) => throw e
-  }
+  val bucket = client.bucket("scaliak-example").unsafePerformIO ||| { throw _ }
 
 
   // Store an object with no conversion

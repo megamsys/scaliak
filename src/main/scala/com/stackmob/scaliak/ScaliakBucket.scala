@@ -7,9 +7,12 @@ import com.basho.riak.client.query.functions.{NamedFunction, NamedErlangFunction
 import scala.collection.JavaConverters._
 import com.basho.riak.client.cap.{UnresolvedConflictException, Quorum}
 import com.basho.riak.client.raw._
+import com.basho.riak.client.query.indexes.{BinIndex, IntIndex}
 import query.indexes.{IntValueQuery, BinValueQuery, IndexQuery}
 import query.LinkWalkSpec
-import com.basho.riak.client.query.indexes.{BinIndex, IntIndex}
+import query.MapReduceSpec
+import mapreduce._
+import com.basho.riak.client.query.MapReduceResult
 
 /**
  * Created by IntelliJ IDEA.
@@ -18,7 +21,7 @@ import com.basho.riak.client.query.indexes.{BinIndex, IntIndex}
  * Time: 10:37 PM
  */
 
-class ScaliakBucket(rawClient: RawClient,
+class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
                     val name: String,
                     val allowSiblings: Boolean,
                     val lastWriteWins: Boolean,
@@ -40,8 +43,15 @@ class ScaliakBucket(rawClient: RawClient,
                     val notFoundOk: Boolean,
                     val chashKeyFunction: NamedErlangFunction,
                     val linkWalkFunction: NamedErlangFunction,
-                    val isSearchable: Boolean) {   
-  
+                    val isSearchable: Boolean) {
+
+
+  def runOnClient[A](f: RawClient => A): A = {
+    rawClientOrClientPool match {
+      case Left(client) => f(client)
+      case Right(pool) => pool.withClient[A](f)
+    }
+  }
 
   /**
    * Warning: Basho advises not to run this operation in production
@@ -71,9 +81,11 @@ class ScaliakBucket(rawClient: RawClient,
                basicQuorum: BasicQuorumArgument = BasicQuorumArgument(),
                returnDeletedVClock: ReturnDeletedVCLockArgument = ReturnDeletedVCLockArgument(),
                ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
-               ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())
-              (implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
-    fetchDangerous(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) except { _.failNel.pure[IO] }
+               ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
+    fetchDangerous(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) except {
+      _.failNel.pure[IO]
+    }
+
   }
 
   /*
@@ -88,11 +100,11 @@ class ScaliakBucket(rawClient: RawClient,
                         basicQuorum: BasicQuorumArgument = BasicQuorumArgument(),
                         returnDeletedVClock: ReturnDeletedVCLockArgument = ReturnDeletedVCLockArgument(),
                         ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
-                        ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())
-                       (implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
+                        ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
     rawFetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) map {
       riakResponseToResult(_)
     }
+
   }
 
   /*
@@ -107,8 +119,7 @@ class ScaliakBucket(rawClient: RawClient,
                      basicQuorum: BasicQuorumArgument = BasicQuorumArgument(),
                      returnDeletedVClock: ReturnDeletedVCLockArgument = ReturnDeletedVCLockArgument(),
                      ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
-                     ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())
-                    (implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNEL[Throwable, Option[T]] = {
+                     ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNEL[Throwable, Option[T]] = {
     fetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified).unsafePerformIO
   }
 
@@ -125,14 +136,14 @@ class ScaliakBucket(rawClient: RawClient,
                dw: DWArgument = DWArgument(),
                returnBody: ReturnBodyArgument = ReturnBodyArgument(),
                ifNoneMatch: Boolean = false,
-               ifNotModified: Boolean = false)
-              (implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T], mutator: ScaliakMutation[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
+               ifNotModified: Boolean = false)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T], mutator: ScaliakMutation[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
     //TODO: need to not convert the object here
     // it causes two calls to converter.write.
     // Instead force domain objects to implement a simple
     // interface exposing their key
     // can also make it part of the scaliak converter interface
     // and remove it from WriteObject
+
     val key = converter.write(obj)._key
     (for {
       resp <- rawFetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock)
@@ -145,28 +156,39 @@ class ScaliakBucket(rawClient: RawClient,
           if (ifNoneMatch) storeMeta.etags(Array(objToStore.getVtag))
           if (ifNotModified) storeMeta.lastModified(objToStore.getLastModified)
 
-          riakResponseToResult(rawClient.store(objToStore, storeMeta))
+          riakResponseToResult {
+            retrier[com.basho.riak.client.raw.RiakResponse] {
+              runOnClient(_.store(objToStore, storeMeta))
+            }
+          }
         }
       }
-    }) except { t => t.failNel.pure[IO] }
+    }) except {
+      t => t.failNel.pure[IO]
+    }
   }
 
+
   /*
-   * This should only be used in cases where the consequences are understood.
-   * With a bucket that has allow_mult set to true, using "put" instead of "store"
-   * will result in significantly more conflicts
-   */
+  * This should only be used in cases where the consequences are understood.
+  * With a bucket that has allow_mult set to true, using "put" instead of "store"
+  * will result in significantly more conflicts
+  */
   def put[T](obj: T,
              w: WArgument = WArgument(),
              pw: PWArgument = PWArgument(),
              dw: DWArgument = DWArgument(),
-             returnBody: ReturnBodyArgument = ReturnBodyArgument())
-            (implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
-    rawClient.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody)).pure[IO] map {
+             returnBody: ReturnBodyArgument = ReturnBodyArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
+    retrier[IO[com.basho.riak.client.raw.RiakResponse]] {
+      runOnClient {
+        _.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody)).pure[IO]
+      }
+    } map {
       riakResponseToResult(_)
     } except {
       _.failNel.pure[IO]
     }
+
   }
 
   // r - int
@@ -175,54 +197,90 @@ class ScaliakBucket(rawClient: RawClient,
   // dw - int
   // pw - int
   // rw - int
-  def delete[T](obj: T, fetchBefore: Boolean = false)
-               (implicit converter: ScaliakConverter[T]): IO[Validation[Throwable, Unit]] = {
+  def delete[T](obj: T, fetchBefore: Boolean = false)(implicit converter: ScaliakConverter[T]): IO[Validation[Throwable, Unit]] = {
     deleteByKey(converter.write(obj)._key, fetchBefore)
   }
 
-  def deleteByKey(key: String, fetchBefore: Boolean = false): IO[Validation[Throwable, Unit]] = {    
-    val deleteMetaBuilder = new DeleteMeta.Builder()    
-    val emptyFetchMeta = new FetchMeta.Builder().build()    
-    val mbFetchHead = if (fetchBefore) rawClient.head(name, key, emptyFetchMeta).pure[Option].pure[IO] else none.pure[IO]
-    (for {
+  def deleteByKey(key: String, fetchBefore: Boolean = false): IO[Validation[Throwable, Unit]] = {
+    val deleteMetaBuilder = new DeleteMeta.Builder()
+    val emptyFetchMeta = new FetchMeta.Builder().build()
+    val mbFetchHead = {
+      if (fetchBefore) {
+        runOnClient {
+          _.head(name, key, emptyFetchMeta).pure[Option].pure[IO]
+        }
+      } else none.pure[IO]
+    }
+
+    val result = (for {
       mbHeadResponse <- mbFetchHead
-      deleteMeta <- prepareDeleteMeta(mbHeadResponse, deleteMetaBuilder).pure[IO]
-      _ <- rawClient.delete(name, key, deleteMeta).pure[IO]
-    } yield ().success[Throwable]) except { t => t.fail[Unit].pure[IO] }
-  }
-
-
-  import linkwalk._
-  // This method discards any objects that have conversion errors
-  def linkWalk[T](obj: ReadObject, steps: LinkWalkSteps)(implicit converter: ScaliakConverter[T]): IO[Iterable[Iterable[T]]] = {
-    for {
-      walkResult <- rawClient.linkWalk(generateLinkWalkSpec(name, obj.key, steps)).pure[IO]
-    } yield {
-      // this is kinda ridiculous
-      walkResult.asScala map { _.asScala map { converter.read(_).toOption } filter { _.isDefined } map { _.get } } filterNot { _.isEmpty }
+      deleteMeta <- retrier[IO[com.basho.riak.client.raw.DeleteMeta]](prepareDeleteMeta(mbHeadResponse, deleteMetaBuilder).pure[IO])
+      _ <- {
+        runOnClient {
+          _.delete(name, key, deleteMeta).pure[IO]
+        }
+      }
+    } yield ().success[Throwable])
+    result except {
+      t => t.fail.pure[IO]
     }
   }
 
-  def fetchIndexByValue(index: String, value: String): IO[Validation[Throwable,List[String]]] = {
+  import linkwalk._
+
+  // This method discards any objects that have conversion errors
+  def linkWalk[T](obj: ReadObject, steps: LinkWalkSteps)(implicit converter: ScaliakConverter[T]): IO[Iterable[Iterable[T]]] = {
+    for {
+      walkResult <- {
+        runOnClient(_.linkWalk(generateLinkWalkSpec(name, obj.key, steps)).pure[IO])
+      }
+    } yield {
+      walkResult.asScala map {
+        _.asScala flatMap {
+          converter.read(_).toOption
+        }
+      } filterNot {
+        _.isEmpty
+      }
+    }
+  }
+
+  def mapReduce(job: MapReduceJob): IO[Validation[Throwable, MapReduceResult]] = {
+    val jobAsJSON = mapreduce.MapReduceBuilder.toJSON(job)
+    val spec = generateMapReduceSpec(jobAsJSON.toString)
+    retrier {
+      runOnClient(_.mapReduce(spec).pure[IO])
+    }.map(_.success[Throwable])
+      .except {
+      _.fail.pure[IO]
+    }
+  }
+
+  def fetchIndexByValue(index: String, value: String): IO[Validation[Throwable, List[String]]] = {
     fetchValueIndex(new BinValueQuery(BinIndex.named(index), name, value))
   }
 
-  def fetchIndexByValue(index: String, value: Int): IO[Validation[Throwable,List[String]]] = {
+  def fetchIndexByValue(index: String, value: Int): IO[Validation[Throwable, List[String]]] = {
     fetchValueIndex(new IntValueQuery(IntIndex.named(index), name, value))
   }
-  
+
   private def generateLinkWalkSpec(bucket: String, key: String, steps: LinkWalkSteps) = {
     new LinkWalkSpec(steps, bucket, key)
   }
 
-  private def fetchValueIndex(query: IndexQuery): IO[Validation[Throwable, List[String]]] = {
-    rawClient.fetchIndex(query)
-      .pure[IO]
-      .map(_.asScala.toList.success[Throwable])
-     .except { _.fail[List[String]].pure[IO] }
+  private def generateMapReduceSpec(mapReduceJSONString: String) = {
+    new MapReduceSpec(mapReduceJSONString)
   }
 
-  private def rawFetch(key: String, 
+  private def fetchValueIndex(query: IndexQuery): IO[Validation[Throwable, List[String]]] = {
+    runOnClient {
+      _.fetchIndex(query).pure[IO].map(_.asScala.toList.success[Throwable]).except {
+        _.fail.pure[IO]
+      }
+    }
+  }
+
+  private def rawFetch(key: String,
                        r: RArgument,
                        pr: PRArgument,
                        notFoundOk: NotFoundOkArgument,
@@ -232,13 +290,17 @@ class ScaliakBucket(rawClient: RawClient,
                        ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument()) = {
     val fetchMetaBuilder = new FetchMeta.Builder()
     List(r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) foreach { _ addToMeta fetchMetaBuilder }
-    rawClient.fetch(name, key, fetchMetaBuilder.build).pure[IO]
+
+    retrier[IO[com.basho.riak.client.raw.RiakResponse]] {
+      runOnClient(_.fetch(name, key, fetchMetaBuilder.build).pure[IO])
+    }
   }
 
-  private def riakResponseToResult[T](r: RiakResponse)
-                             (implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNEL[Throwable, Option[T]] = {
-    ((r.getRiakObjects map { converter.read(_) }).toList.toNel map { sibs =>
-      resolver(sibs)
+  private def riakResponseToResult[T](r: RiakResponse)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNEL[Throwable, Option[T]] = {
+    ((r.getRiakObjects map {
+      converter.read(_)
+    }).toList.toNel map { sibs =>
+        resolver(sibs)
     }).sequence[ScaliakConverter[T]#ReadResult, T]
   }
 
@@ -256,16 +318,28 @@ class ScaliakBucket(rawClient: RawClient,
     (mbPrepared | deleteMetaBuilder).build
   }
 
+  private def retrier[R](f: => R, attempts: Int = 3): R = {
+    try {
+      f
+    } catch {
+      case e => {
+        if (attempts == 0) {
+          throw e
+        } else {
+          retrier(f, attempts - 1)
+        }
+      }
+    }
+  }
 }
-
 
 trait ScaliakConverter[T] {
   type ReadResult[T] = ValidationNEL[Throwable, T]
+
   def read(o: ReadObject): ReadResult[T]
 
   def write(o: T): WriteObject
 }
-
 
 object ScaliakConverter extends ScaliakConverters {
   implicit lazy val DefaultConverter = PassThroughConverter
@@ -273,35 +347,33 @@ object ScaliakConverter extends ScaliakConverters {
 
 trait ScaliakConverters {
 
-  def newConverter[T](r: ReadObject => ValidationNEL[Throwable, T],
-                      w: T => WriteObject) = new ScaliakConverter[T] {
+  def newConverter[T](r: ReadObject => ValidationNEL[Throwable, T], w: T => WriteObject) = new ScaliakConverter[T] {
     def read(o: ReadObject) = r(o)
+
     def write(o: T) = w(o)
   }
-  
+
   lazy val PassThroughConverter = newConverter[ReadObject](
-    (o =>
+    ((o: ReadObject) =>
       o.successNel[Throwable]),
-    (o =>
+    ((o: ReadObject) =>
       WriteObject(key = o.key, value = o.bytes, contentType = o.contentType,
         links = o.links, metadata = o.metadata, binIndexes = o.binIndexes, intIndexes = o.intIndexes,
-        vTag = o.vTag, lastModified = o.lastModified))
-  )
+        vTag = o.vTag, lastModified = o.lastModified)))
 }
 
 sealed trait ScaliakResolver[T] {
 
-  def apply(siblings: NonEmptyList[ValidationNEL[Throwable, T]]): ValidationNEL[Throwable, T]    
+  def apply(siblings: NonEmptyList[ValidationNEL[Throwable, T]]): ValidationNEL[Throwable, T]
 
 }
 
 object ScaliakResolver extends ScaliakResolvers {
 
   implicit def DefaultResolver[T] = newResolver[T](
-   siblings =>
-     if (siblings.count == 1) siblings.head
-     else throw new UnresolvedConflictException(null, "there were siblings", siblings.list.asJavaCollection)
-  )
+    siblings =>
+      if (siblings.count == 1) siblings.head
+      else throw new UnresolvedConflictException(null, "there were siblings", siblings.list.asJavaCollection))
 
 }
 
@@ -312,9 +384,9 @@ trait ScaliakResolvers {
 }
 
 trait ScaliakMutation[T] {
-  
+
   def apply(storedObject: Option[T], newObject: T): T
-  
+
 }
 
 object ScaliakMutation extends ScaliakMutators {
@@ -322,12 +394,12 @@ object ScaliakMutation extends ScaliakMutators {
 }
 
 trait ScaliakMutators {
-  
+
   def newMutation[T](mutate: (Option[T], T) => T) = new ScaliakMutation[T] {
     def apply(o: Option[T], n: T) = mutate(o, n)
   }
-  
+
   def ClobberMutation[T] = newMutation((o: Option[T], n: T) => n)
-  
+
 }
 
