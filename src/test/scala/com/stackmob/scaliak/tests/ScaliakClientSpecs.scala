@@ -5,7 +5,7 @@ import mock._
 import scalaz._
 import Scalaz._
 import scalaz.effects._
-import com.stackmob.scaliak.ScaliakClient
+import com.stackmob.scaliak.{RawClientWithStreaming, ScaliakClient}
 import java.io.IOException
 import com.basho.riak.client.raw.http.HTTPClientAdapter
 import java.util.LinkedList
@@ -91,21 +91,13 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
       "returns a some containing the client id if one exists"                       ! getExistingClientId ^
       "returns a none if a client id has not been set"                              ! getMissingClientId ^
                                                                                     endp^
-  "Getting the underlying transport"                                                ^
-    "returns HTTP for HTTP Client"                                                  ! transportHttp ^
-    "returns PBC for Protobufs client"                                              ! transportPbc ^
-    "isHTTP returns true if client is HTTP"                                         ! isHttpHttp ^
-    "isHTTP returns false if client is PBC"                                         ! isHttpPbc ^
-    "isPBC returns true if client is PBC"                                           ! isPbPbc ^
-    "isPBC returns false if client is HTTP"                                         ! isPbHttp ^
-                                                                                    endp^
   "Pinging Riak"                                                                    ^
     "returns true if no exception is thrown by the raw client"                      ! skipped ^
     "returns false if an exception is thrown by the raw client"                     ! skipped ^
                                                                                     end
 
 
-  val rawClient = mock[com.basho.riak.client.raw.RawClient]
+  val rawClient = mock[RawClientWithStreaming]
   val client = new ScaliakClient(rawClient)
 
   val bucketName = "test"
@@ -274,35 +266,4 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
     rawClient.getClientId returns null
     client.clientId must beNone
   }
-  
-  def transportHttp = {
-    rawClient.getTransport returns Transport.HTTP
-    client.transport must beEqualTo(Transport.HTTP)
-  }
-  
-  def transportPbc = {
-    rawClient.getTransport returns Transport.PB
-    client.transport must beEqualTo(Transport.PB)
-  }
-
-  def isHttpHttp = {
-    rawClient.getTransport returns Transport.HTTP
-    client.isHttp must beTrue
-  }
-
-  def isHttpPbc = {
-    rawClient.getTransport returns Transport.PB
-    client.isHttp must beFalse
-  }
-
-  def isPbPbc = {
-    rawClient.getTransport returns Transport.PB
-    client.isPb must beTrue
-  }
-
-  def isPbHttp = {
-    rawClient.getTransport returns Transport.HTTP
-    client.isPb must beFalse
-  }
-
 }

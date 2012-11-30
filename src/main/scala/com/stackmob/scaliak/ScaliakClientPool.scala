@@ -4,29 +4,65 @@ import scalaz._
 import Scalaz._
 import effects._
 
-import com.basho.riak.client.raw.RawClient
+import org.apache.commons.pool._
+import org.apache.commons.pool.impl._
+
 import java.io.IOException
+
+import com.basho.riak.client.raw.http.HTTPClientAdapter
+import com.basho.riak.client.raw.pbc.PBClientAdapter
+import com.basho.riak.client.raw.RawClient
+
 import com.basho.riak.client.http.response.RiakIORuntimeException
 import com.basho.riak.client.query.functions.{ NamedErlangFunction, NamedFunction }
 import scala.collection.JavaConversions._
 import com.basho.riak.client.bucket.BucketProperties
+import com.basho.riak.client.raw.{ Transport => RiakTransport }
 import com.basho.riak.client.builders.BucketPropertiesBuilder
 
-/**
- * Created by IntelliJ IDEA.
- * User: jordanrw
- * Date: 12/8/11
- * Time: 10:03 PM
- */
 
-class ScaliakClient(rawClient: RawClientWithStreaming, secHTTPClient: Option[RawClient] = None) {
+abstract class ScaliakClientPool {
+  def withClient[T](body: RawClient => T): T
+}
 
-  private val bucketPropertyClient = secHTTPClient getOrElse rawClient
+private class ScaliakPbClientFactory(host: String, port: Int) extends PoolableObjectFactory {
+  def makeObject = new PBClientAdapter(host, port) 
 
-  def listBuckets: IO[Set[String]] = {
-    rawClient.listBuckets().pure[IO] map { _.toSet }
+  def destroyObject(sc: Object): Unit = { 
+	  sc.asInstanceOf[RawClient].shutdown
+	  // Methods for client destroying
   }
 
+  def passivateObject(sc: Object): Unit = {} 
+  def validateObject(sc: Object) = {
+    try {
+      //sc.asInstanceOf[RawClient].ping
+      true
+    }
+    catch {
+      case e => false 
+    }
+  }
+
+  def activateObject(sc: Object): Unit = {}
+}
+
+class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends ScaliakClientPool {
+  val pool = new StackObjectPool(new ScaliakPbClientFactory(host, port))
+  val secHTTPClient = new HTTPClientAdapter("http://" + host + ":" + httpPort + "/riak")
+  
+  override def toString = host + ":" + String.valueOf(port)
+
+  def withClient[T](body: RawClient => T): T = {
+    val client = pool.borrowObject.asInstanceOf[RawClient]
+    val response = body(client) 
+    pool.returnObject(client)
+    response
+  }
+
+  // close pool & free resources
+  def close = pool.close
+  
   def bucket(name: String,
              allowSiblings: AllowSiblingsArgument = AllowSiblingsArgument(),
              lastWriteWins: LastWriteWinsArgument = LastWriteWinsArgument(),
@@ -43,15 +79,15 @@ class ScaliakClient(rawClient: RawClientWithStreaming, secHTTPClient: Option[Raw
 
     val updateBucket = (metaArgs map { _.value.isDefined }).asMA.sum // update if more one or more arguments is passed in
 
-    val fetchAction = bucketPropertyClient.fetchBucket(name).pure[IO]
-
+    val fetchAction = secHTTPClient.fetchBucket(name).pure[IO]
     val fullAction = if (updateBucket) {
-      bucketPropertyClient.updateBucket(name,
+      secHTTPClient.updateBucket(name,
         createUpdateBucketProps(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
       ).pure[IO] >>=| fetchAction
     } else {
       fetchAction
     }
+
 
     (for {
       b <- fullAction
@@ -66,34 +102,12 @@ class ScaliakClient(rawClient: RawClientWithStreaming, secHTTPClient: Option[Raw
       case Right(s) => s.success
     }}
   }
-
-  // this method causes side effects and may throw
-  // exceptions with the PBCAdapter
-  def clientId = Option {
-    bucketPropertyClient.getClientId
-  }
-
-  def setClientId(id: Array[Byte]) = {
-    bucketPropertyClient.setClientId(id)
-    this
-  }
-
-  def generateAndSetClientId(): Array[Byte] = {
-    bucketPropertyClient.generateAndSetClientId()
-  }
-
-  def shutdown() {
-    secHTTPClient.foreach(_.shutdown())
-    rawClient.shutdown()
-  }
   
-  def ping() { rawClient.ping() }
-
   private def buildBucket(b: BucketProperties, name: String) = {
     val precommits = Option(b.getPrecommitHooks).cata(_.toArray.toSeq, Nil) map { _.asInstanceOf[NamedFunction] }
     val postcommits = Option(b.getPostcommitHooks).cata(_.toArray.toSeq, Nil) map { _.asInstanceOf[NamedErlangFunction] }
     new ScaliakBucket(
-      rawClientOrClientPool = Left(rawClient),
+      rawClientOrClientPool = Right(this),
       name = name,
       allowSiblings = b.getAllowSiblings,
       lastWriteWins = b.getLastWriteWins,
@@ -135,5 +149,4 @@ class ScaliakClient(rawClient: RawClientWithStreaming, secHTTPClient: Option[Raw
     alList.foreach { _ addToMeta builder }
     builder.build
   }
-
 }

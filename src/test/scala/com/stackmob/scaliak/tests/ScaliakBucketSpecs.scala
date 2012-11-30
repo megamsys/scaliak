@@ -1169,7 +1169,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     def rawClient: RawClient
 
     def createBucketWithClient(r: RawClient) =  new ScaliakBucket(
-      rawClient = r,
+      rawClientOrClientPool = Left(r),
       name = testBucket,
       allowSiblings = false,
       lastWriteWins = false,
