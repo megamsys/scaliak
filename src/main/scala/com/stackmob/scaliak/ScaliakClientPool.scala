@@ -22,7 +22,7 @@ import com.basho.riak.client.builders.BucketPropertiesBuilder
 
 
 abstract class ScaliakClientPool {
-  def withClient[T](body: RawClient => T): T
+  def withClient[T](body: RawClientWithStreaming => T): T
 }
 
 private class ScaliakPbClientFactory(host: String, port: Int) extends PoolableObjectFactory {

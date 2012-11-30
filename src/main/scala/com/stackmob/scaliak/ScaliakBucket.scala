@@ -21,7 +21,7 @@ import com.basho.riak.client.query.MapReduceResult
  * Time: 10:37 PM
  */
 
-class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
+class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, ScaliakClientPool],
                     val name: String,
                     val allowSiblings: Boolean,
                     val lastWriteWins: Boolean,
@@ -46,7 +46,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
                     val isSearchable: Boolean) {
 
 
-  def runOnClient[A](f: RawClient => A): A = {
+  def runOnClient[A](f: RawClientWithStreaming => A): A = {
     rawClientOrClientPool match {
       case Left(client) => f(client)
       case Right(pool) => pool.withClient[A](f)
@@ -83,7 +83,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
                ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
                ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
     fetchDangerous(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) except {
-      _.failNel.pure[IO]
+      _.failNel[Option[T]].pure[IO]
     }
 
   }
@@ -164,7 +164,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
         }
       }
     }) except {
-      t => t.failNel.pure[IO]
+      t => t.failNel[Option[T]].pure[IO]
     }
   }
 
@@ -186,7 +186,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     } map {
       riakResponseToResult(_)
     } except {
-      _.failNel.pure[IO]
+      _.failNel[Option[T]].pure[IO]
     }
 
   }
@@ -222,7 +222,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
       }
     } yield ().success[Throwable])
     result except {
-      t => t.fail.pure[IO]
+      t => t.fail[Unit].pure[IO]
     }
   }
 
@@ -250,9 +250,18 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
     val spec = generateMapReduceSpec(jobAsJSON.toString)
     retrier {
       runOnClient(_.mapReduce(spec).pure[IO])
-    }.map(_.success[Throwable])
-      .except {
-      _.fail.pure[IO]
+    }.map(_.success[Throwable]).except {
+      _.fail[MapReduceResult].pure[IO]
+    }
+  }
+
+  def mapReduce[T, A](job: MapReduceJob, theClass: Class[T], iter: IterV[T, A]): IO[Validation[Throwable, IterV[T,A]]] = {
+    val jobAsJSON = mapreduce.MapReduceBuilder.toJSON(job)
+    val spec = generateMapReduceSpec(jobAsJSON.toString)
+    retrier {
+      runOnClient(_.mapReduce(spec, theClass, iter))
+    }.map(_.success[Throwable]).except {
+      _.fail[IterV[T, A]].pure[IO]
     }
   }
 
@@ -275,7 +284,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClient, ScaliakClientPool],
   private def fetchValueIndex(query: IndexQuery): IO[Validation[Throwable, List[String]]] = {
     runOnClient {
       _.fetchIndex(query).pure[IO].map(_.asScala.toList.success[Throwable]).except {
-        _.fail.pure[IO]
+        _.fail[List[String]].pure[IO]
       }
     }
   }
