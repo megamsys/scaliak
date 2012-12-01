@@ -255,13 +255,13 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
     }
   }
 
-  def mapReduce[T, A](job: MapReduceJob, theClass: Class[T], iter: IterV[T, A]): IO[Validation[Throwable, IterV[T,A]]] = {
+  def mapReduce[T, U, A](job: MapReduceJob, theClass: Class[T], converter: T => U, iter: IterV[U, A]): IO[Validation[Throwable, IterV[U,A]]] = {
     val jobAsJSON = mapreduce.MapReduceBuilder.toJSON(job)
     val spec = generateMapReduceSpec(jobAsJSON.toString)
     retrier {
-      runOnClient(_.mapReduce(spec, theClass, iter))
+      runOnClient(_.mapReduce(spec, theClass, converter, iter))
     }.map(_.success[Throwable]).except {
-      _.fail[IterV[T, A]].pure[IO]
+      _.fail[IterV[U, A]].pure[IO]
     }
   }
 

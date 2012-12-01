@@ -23,18 +23,18 @@ class PBStreamingClient(host: String, port: Int) extends PBClientAdapter(host, p
   val pbClient = new PBRiakClient(host, port)
   val mapper = new ObjectMapper()
 
-  def mapReduce[T, A](spec: MapReduceSpec, elementClass: Class[T], iter: IterV[T, A]): IO[IterV[T, A]] = {
+  def mapReduce[T, U, A](spec: MapReduceSpec, elementClass: Class[T],  converter: T => U,  iter: IterV[U, A]): IO[IterV[U, A]] = {
     val meta = new RequestMeta()
     meta.contentType(Constants.CTYPE_JSON)
     val source = pbClient.mapReduce(spec.getJSON, meta)
 
     def deserialize(resp: MapReduceResponse): T = mapper.readValue(resp.getJSON.toString, TypeFactory.`type`(elementClass))
 
-    def feedFromSource(source: MapReduceResponseSource, iter: IterV[T, A]): IO[IterV[T, A]] = iter match {
+    def feedFromSource(source: MapReduceResponseSource, iter: IterV[U, A]): IO[IterV[U, A]] = iter match {
       case _ if source.isClosed => iter.pure[IO]
       case Done(_, _) => iter.pure[IO]
-      case Cont(k) if !source.hasNext => feedFromSource(source, k(Empty[T]))
-      case Cont(k) => source.next().pure[IO].flatMap(next => feedFromSource(source, k(El(deserialize(next)))))
+      case Cont(k) if !source.hasNext => feedFromSource(source, k(Empty[U]))
+      case Cont(k) => source.next().pure[IO].flatMap(next => feedFromSource(source, k(El(converter(deserialize(next))))))
     }
 
     feedFromSource(source, iter)

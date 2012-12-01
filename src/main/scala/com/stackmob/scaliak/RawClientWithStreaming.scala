@@ -15,5 +15,5 @@ import scalaz.effects.IO
  */
 trait RawClientWithStreaming extends RawClient {
 
-  def mapReduce[T, A](spec: MapReduceSpec, elementClass: Class[T], iter: IterV[T, A]): IO[IterV[T, A]]
+  def mapReduce[T, U, A](spec: MapReduceSpec, elementClass: Class[T], converter: T => U, iter: IterV[U, A]): IO[IterV[U, A]]
 }
