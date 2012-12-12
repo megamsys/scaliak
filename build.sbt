@@ -2,8 +2,6 @@ name := "scaliak"
 
 organization := "com.stackmob"
 
-version := "0.2"
-
 scalaVersion := "2.9.1"
 
 crossScalaVersions := Seq("2.9.1")
@@ -14,22 +12,25 @@ resolvers ++= Seq("Typesafe Repository (releases)" at "http://repo.typesafe.com/
 )
 
 libraryDependencies ++= Seq(		          
-    "org.scalaz" %% "scalaz-core" % "6.0.3",
-    "net.liftweb" %% "lift-json-scalaz" % "2.4",
-    "com.basho.riak" % "riak-client" % "1.0.5",
-    "org.specs2" %% "specs2" % "1.9" % "test",
-    "org.mockito" % "mockito-all" % "1.9.0" % "test",
-    "commons-pool" % "commons-pool" % "1.5.6"
+  "org.scalaz" %% "scalaz-core" % "6.0.3",
+  "net.liftweb" %% "lift-json-scalaz" % "2.4",
+  "com.basho.riak" % "riak-client" % "1.0.5",
+  "commons-pool" % "commons-pool" % "1.5.6",
+  "org.specs2" %% "specs2" % "1.9" % "test",
+  "org.mockito" % "mockito-all" % "1.9.0" % "test"
 )
+
+releaseSettings
 
 logBuffered := false
 
 publishTo <<= version { v: String =>
   val nexus = "https://oss.sonatype.org/"
-  if (v.trim.endsWith("SNAPSHOT"))
+  if (v.trim.endsWith("SNAPSHOT")) {
     Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
+  } else {
     Some("releases" at nexus + "service/local/staging/deploy/maven2")
+  }
 }
 
 publishMavenStyle := true
