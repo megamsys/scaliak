@@ -2,6 +2,21 @@
 
 Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functional Twist. It is currently being used in production at StackMob.
 
+## Usage
+
+### sbt
+```scala
+"com.stackmob" %% "scaliak" % "0.3.0" 
+```
+### maven
+```xml
+<dependency>
+  <groupId>com.stackmob</groupId>
+  <artifactId>scaliak_2.9.1</artifactId>
+  <version>0.3.0</version>
+</dependency>
+```
+
 ## Status
 
 Scaliak is currently feature incomplete vs. the original High-Level Riak Java Client. What is currently supported are mostly features being used in production (there have been a few features implemented and subsequently not used). 
