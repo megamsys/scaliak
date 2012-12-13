@@ -11,6 +11,8 @@ import effects.IO
 import Scalaz._
 import org.codehaus.jackson.map.ObjectMapper
 import org.codehaus.jackson.map.`type`.TypeFactory
+import annotation.tailrec
+import scala.collection.JavaConverters._
 
 /**
  * Created with IntelliJ IDEA.
@@ -28,13 +30,22 @@ class PBStreamingClient(host: String, port: Int) extends PBClientAdapter(host, p
     meta.contentType(Constants.CTYPE_JSON)
     val source = pbClient.mapReduce(spec.getJSON, meta)
 
-    def deserialize(resp: MapReduceResponse): T = mapper.readValue(resp.getJSON.toString, TypeFactory.`type`(elementClass))
+    def deserialize(resp: MapReduceResponse): T = mapper.readValue[java.util.Collection[T]](resp.getJSON.toString, TypeFactory.collectionType(classOf[java.util.Collection[_]], elementClass)).asScala.head
 
+    @tailrec
     def feedFromSource(source: MapReduceResponseSource, iter: IterV[U, A]): IO[IterV[U, A]] = iter match {
       case _ if source.isClosed => iter.pure[IO]
       case Done(_, _) => iter.pure[IO]
       case Cont(k) if !source.hasNext => feedFromSource(source, k(Empty[U]))
-      case Cont(k) => source.next().pure[IO].flatMap(next => feedFromSource(source, k(El(converter(deserialize(next))))))
+      case Cont(k) => {
+        val next = source.next()
+        if(Option(next.getJSON).isDefined) {
+          feedFromSource(source, k(El(converter(deserialize(next)))))
+        } else {
+          iter.pure[IO]
+        }
+      }
+
     }
 
     feedFromSource(source, iter)
