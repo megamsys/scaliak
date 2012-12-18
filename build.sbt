@@ -16,11 +16,13 @@ libraryDependencies ++= Seq(
   "net.liftweb" %% "lift-json-scalaz" % "2.4",
   "com.basho.riak" % "riak-client" % "1.0.5",
   "commons-pool" % "commons-pool" % "1.5.6",
-  "org.specs2" %% "specs2" % "1.9" % "test",
+  "org.specs2" %% "specs2" % "1.12.1" % "test",
   "org.mockito" % "mockito-all" % "1.9.0" % "test"
 )
 
 releaseSettings
+
+org.scalastyle.sbt.ScalastylePlugin.Settings
 
 logBuffered := false
 
