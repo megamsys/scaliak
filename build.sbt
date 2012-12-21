@@ -22,6 +22,8 @@ libraryDependencies ++= Seq(
 
 releaseSettings
 
+net.virtualvoid.sbt.graph.Plugin.graphSettings
+
 org.scalastyle.sbt.ScalastylePlugin.Settings
 
 logBuffered := false
