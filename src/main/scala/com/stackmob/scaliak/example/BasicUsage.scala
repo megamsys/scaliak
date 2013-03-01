@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory
 
 object BasicUsage extends App {
 
-  private lazy val logger = LoggerFactory.getLogger(classOf[BasicUsage.type])
+  private lazy val logger = LoggerFactory.getLogger(getClass)
 
   val client = Scaliak.httpClient("http://localhost:8091/riak")
   client.generateAndSetClientId() // always calls this or setClientId(Array[Byte]) after creating a client

@@ -35,7 +35,7 @@ object SomeDomainObject {
 object DomainObjects extends App {
   import SomeDomainObject._ // put the implicits at a higher priority scope
 
-  private lazy val logger = LoggerFactory.getLogger(classOf[DomainObjects.type])
+  private lazy val logger = LoggerFactory.getLogger(getClass)
 
   val client = Scaliak.httpClient("http://127.0.0.1:8098/riak")
   client.generateAndSetClientId()
