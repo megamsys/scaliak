@@ -12,7 +12,7 @@ Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functio
 ```xml
 <dependency>
   <groupId>com.stackmob</groupId>
-  <artifactId>scaliak_2.9.1</artifactId>
+  <artifactId>scaliak_${scala.version}</artifactId>
   <version>0.3.1</version>
 </dependency>
 ```

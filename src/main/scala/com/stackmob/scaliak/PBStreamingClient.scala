@@ -1,3 +1,19 @@
+/**
+ * Copyright 2012-2013 StackMob
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.stackmob.scaliak
 
 import com.basho.riak.client.raw.pbc.PBClientAdapter
@@ -9,28 +25,26 @@ import scalaz.IterV._
 import scalaz.{Empty => _, _}
 import effects.IO
 import Scalaz._
-import org.codehaus.jackson.map.ObjectMapper
-import org.codehaus.jackson.map.`type`.TypeFactory
+import com.fasterxml.jackson.databind.ObjectMapper
 import annotation.tailrec
 import scala.collection.JavaConverters._
 
-/**
- * Created with IntelliJ IDEA.
- * User: drapp
- * Date: 11/27/12
- * Time: 12:34 AM
- */
 class PBStreamingClient(host: String, port: Int) extends PBClientAdapter(host, port) with RawClientWithStreaming {
 
   val pbClient = new PBRiakClient(host, port)
   val mapper = new ObjectMapper()
 
-  def mapReduce[T, U, A](spec: MapReduceSpec, elementClass: Class[T],  converter: T => U,  iter: IterV[U, A]): IO[IterV[U, A]] = {
+  override def mapReduce[T, U, A](spec: MapReduceSpec, elementClass: Class[T], converter: T => U,  iter: IterV[U, A]): IO[IterV[U, A]] = {
     val meta = new RequestMeta()
     meta.contentType(Constants.CTYPE_JSON)
     val source = pbClient.mapReduce(spec.getJSON, meta)
 
-    def deserialize(resp: MapReduceResponse): T = mapper.readValue[java.util.Collection[T]](resp.getJSON.toString, TypeFactory.collectionType(classOf[java.util.Collection[_]], elementClass)).asScala.head
+    def deserialize(resp: MapReduceResponse): T = {
+      mapper.readValue[java.util.Collection[T]](
+        resp.getJSON.toString,
+        mapper.getTypeFactory.constructCollectionType(classOf[java.util.Collection[_]], elementClass)
+      ).asScala.head
+    }
 
     @tailrec
     def feedFromSource(source: MapReduceResponseSource, iter: IterV[U, A]): IO[IterV[U, A]] = iter match {

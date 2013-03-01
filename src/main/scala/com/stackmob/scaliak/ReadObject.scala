@@ -1,3 +1,19 @@
+/**
+ * Copyright 2012-2013 StackMob
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.stackmob.scaliak
 
 import scalaz._
@@ -82,7 +98,7 @@ object ReadObject {
       links = (obj.getLinks.asScala map { l => l: ScaliakLink }).toList.toNel,
       metadata = obj.getMeta.asScala.toMap,
       binIndexes = obj.allBinIndexes.asScala.mapValues(_.asScala.toSet).toMap,
-      intIndexes = obj.allIntIndexes.asScala.mapValues(_.asScala.map(_.intValue()).toSet).toMap
+      intIndexes = obj.allIntIndexesV2.asScala.mapValues(_.asScala.map(_.intValue()).toSet).toMap
     )
   }
   
@@ -125,14 +141,14 @@ sealed trait WriteObject {
 
   private def buildIndexes: RiakIndexes = {
     val binIndexes: java.util.Map[BinIndex, java.util.Set[String]] = new java.util.HashMap[BinIndex,java.util.Set[String]]()
-    val intIndexes: java.util.Map[IntIndex, java.util.Set[java.lang.Integer]] = new java.util.HashMap[IntIndex,java.util.Set[java.lang.Integer]]()
+    val intIndexes: java.util.Map[IntIndex, java.util.Set[java.lang.Long]] = new java.util.HashMap[IntIndex,java.util.Set[java.lang.Long]]()
     for { (k,v) <- _binIndexes } {
       val set: java.util.Set[String] = new java.util.HashSet[String]()
       v.foreach(set.add(_))
       binIndexes.put(k,set)
     }
     for { (k,v) <- _intIndexes } {
-      val set: java.util.Set[java.lang.Integer] = new java.util.HashSet[java.lang.Integer]()
+      val set: java.util.Set[java.lang.Long] = new java.util.HashSet[java.lang.Long]()
       v.foreach(set.add(_))
       intIndexes.put(k,set)
     }

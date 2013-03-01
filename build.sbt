@@ -1,32 +1,61 @@
+import net.virtualvoid.sbt.graph.Plugin
+import org.scalastyle.sbt.ScalastylePlugin
+import ScaliakReleaseSteps._
+import sbtrelease._
+import ReleaseStateTransformations._
+import ReleasePlugin._
+import ReleaseKeys._
+import sbt._
+
 name := "scaliak"
 
 organization := "com.stackmob"
 
 scalaVersion := "2.9.1"
 
-crossScalaVersions := Seq("2.9.1")
+crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0")
 
-resolvers ++= Seq("Typesafe Repository (releases)" at "http://repo.typesafe.com/typesafe/releases/",
-                  "Scala Tools Repository (snapshots)" at "http://scala-tools.org/repo-snapshots",
-                  "Scala Tools Repository (releases)"  at "http://scala-tools.org/repo-releases"
-)
+scalacOptions <++= (scalaVersion).map { version: String =>
+  val defaults = Seq("-unchecked", "-deprecation")
+  if (version.startsWith("2.10")) {
+    defaults ++ Seq("-feature", "-language:implicitConversions,", "-language:higherKinds", "-language:reflectiveCalls")
+  } else {
+    defaults
+  }
+}
 
 libraryDependencies ++= Seq(		          
-  "org.scalaz" %% "scalaz-core" % "6.0.3",
-  "net.liftweb" %% "lift-json-scalaz" % "2.4",
-  "com.basho.riak" % "riak-client" % "1.0.5",
-  "commons-pool" % "commons-pool" % "1.5.6",
-  "org.specs2" %% "specs2" % "1.12.1" % "test",
+  "org.scalaz" %% "scalaz-core" % "6.0.4",
+  "net.liftweb" %% "lift-json-scalaz" % "2.5-RC1",
+  "com.basho.riak" % "riak-client" % "1.1.0",
+  "commons-pool" % "commons-pool" % "1.6",
+  "org.slf4j" % "slf4j-api" % "1.7.2",
+  "org.specs2" %% "specs2" % "1.12.3" % "test",
+  "org.pegdown" % "pegdown" % "1.0.2" % "test",
   "org.mockito" % "mockito-all" % "1.9.0" % "test"
 )
 
+logBuffered := false
+
+Plugin.graphSettings
+
+ScalastylePlugin.Settings
+
 releaseSettings
 
-net.virtualvoid.sbt.graph.Plugin.graphSettings
-
-org.scalastyle.sbt.ScalastylePlugin.Settings
-
-logBuffered := false
+releaseProcess := Seq[ReleaseStep](
+  checkSnapshotDependencies,
+  inquireVersions,
+  runTest,
+  setReleaseVersion,
+  commitReleaseVersion,
+  setReadmeReleaseVersion,
+  tagRelease,
+  publishArtifacts,
+  setNextVersion,
+  commitNextVersion,
+  pushChanges
+)
 
 publishTo <<= version { v: String =>
   val nexus = "https://oss.sonatype.org/"
@@ -41,7 +70,9 @@ publishMavenStyle := true
 
 publishArtifact in Test := false
 
-pomIncludeRepository := { x => false }
+testOptions in Test += Tests.Argument("html", "console")
+
+pomIncludeRepository := { _ => false }
 
 pomExtra := (
   <url>https://github.com/stackmob/scaliak</url>

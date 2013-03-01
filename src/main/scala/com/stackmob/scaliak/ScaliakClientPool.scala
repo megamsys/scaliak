@@ -1,3 +1,19 @@
+/**
+ * Copyright 2012-2013 StackMob
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.stackmob.scaliak
 
 import scalaz._
@@ -11,40 +27,39 @@ import java.io.IOException
 
 import com.basho.riak.client.raw.http.HTTPClientAdapter
 import com.basho.riak.client.raw.pbc.PBClientAdapter
-import com.basho.riak.client.raw.RawClient
 
 import com.basho.riak.client.http.response.RiakIORuntimeException
 import com.basho.riak.client.query.functions.{ NamedErlangFunction, NamedFunction }
-import scala.collection.JavaConversions._
 import com.basho.riak.client.bucket.BucketProperties
-import com.basho.riak.client.raw.{ Transport => RiakTransport }
 import com.basho.riak.client.builders.BucketPropertiesBuilder
-
 
 abstract class ScaliakClientPool {
   def withClient[T](body: RawClientWithStreaming => T): T
 }
 
-private class ScaliakPbClientFactory(host: String, port: Int) extends PoolableObjectFactory {
-  def makeObject = new PBClientAdapter(host, port) 
+private class ScaliakPbClientFactory(host: String, port: Int) extends PoolableObjectFactory[Object] {
 
-  def destroyObject(sc: Object): Unit = { 
-	  sc.asInstanceOf[RawClientWithStreaming].shutdown
+  override def makeObject(): Object = new PBClientAdapter(host, port)
+
+  override def destroyObject(sc: Object) {
+	  sc.asInstanceOf[RawClientWithStreaming].shutdown()
 	  // Methods for client destroying
   }
 
-  def passivateObject(sc: Object): Unit = {} 
-  def validateObject(sc: Object) = {
+  override def passivateObject(sc: Object) { }
+
+  override def validateObject(sc: Object): Boolean = {
     try {
       //sc.asInstanceOf[RawClient].ping
       true
     }
     catch {
-      case e => false 
+      case e: Throwable => false 
     }
   }
 
-  def activateObject(sc: Object): Unit = {}
+  override def activateObject(sc: Object) { }
+
 }
 
 class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends ScaliakClientPool {
@@ -61,7 +76,9 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
   }
 
   // close pool & free resources
-  def close = pool.close
+  def close() {
+    pool.close()
+  }
   
   def bucket(name: String,
              allowSiblings: AllowSiblingsArgument = AllowSiblingsArgument(),

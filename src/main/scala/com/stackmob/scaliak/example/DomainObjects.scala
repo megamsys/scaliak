@@ -1,18 +1,28 @@
+/**
+ * Copyright 2012-2013 StackMob
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.stackmob.scaliak
 package example
 
 import scalaz._
 import Scalaz._
-import effects._ // not necessary unless you want to take advantage of IO monad
+import effects._
+import org.slf4j.LoggerFactory
 
-/**
- * Created by IntelliJ IDEA.
- * User: jordanrw
- * Date: 12/16/11
- * Time: 2:00 PM 
- */
-
-case class SomeDomainObject(val key: String, val value: String)
+case class SomeDomainObject(key: String, value: String)
 object SomeDomainObject {
 
   implicit val domainConverter: ScaliakConverter[SomeDomainObject] = ScaliakConverter.newConverter[SomeDomainObject](
@@ -25,6 +35,8 @@ object SomeDomainObject {
 object DomainObjects extends App {
   import SomeDomainObject._ // put the implicits at a higher priority scope
 
+  private lazy val logger = LoggerFactory.getLogger(classOf[DomainObjects.type])
+
   val client = Scaliak.httpClient("http://127.0.0.1:8098/riak")
   client.generateAndSetClientId()
 
@@ -32,7 +44,6 @@ object DomainObjects extends App {
     case Success(b) => b
     case Failure(e) => throw e
   }
-
   
   // store a domain object
   val key = "some-key"
@@ -44,19 +55,19 @@ object DomainObjects extends App {
   val fetchResult: ValidationNEL[Throwable, Option[SomeDomainObject]] = bucket.fetch(key).unsafePerformIO
   fetchResult match {
     case Success(mbFetched) => {
-      println(mbFetched some { v => v.key + ":" + v.value } none { "did not find key" })
+      logger.debug(mbFetched some { v => v.key + ":" + v.value } none { "did not find key" })
     }
     case Failure(es) => throw es.head
   }
 
   def printFetchRes(v: ValidationNEL[Throwable, Option[SomeDomainObject]]): IO[Unit] = v match {
     case Success(mbFetched) => {
-      println(
+      logger.debug(
         mbFetched some { "fetched: " + _.toString } none { "key does not exist" }
       ).pure[IO]
     }
     case Failure(es) => {
-      (es foreach println).pure[IO]
+      (es.foreach(e => logger.warn(e.getMessage))).pure[IO]
     }
   }    
 
@@ -65,12 +76,11 @@ object DomainObjects extends App {
     (r.toOption | none) some { obj =>
       for {
         _ <- printFetchRes(r)
-        _ <- println("deleting").pure[IO]
         _ <- bucket.delete(obj)
-        _ <- println("deleted").pure[IO]
+        _ <- logger.debug("deleted").pure[IO]
       } yield ()
     } none {
-      println("no object to delete").pure[IO]
+      logger.debug("no object to delete").pure[IO]
     }
   }
   
