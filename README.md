@@ -1,6 +1,6 @@
 # Scaliak
 
-[![Build Status](https://travis-ci.org/stackmob/scaliak.png)](https://travis-ci.org/stackmob/scaliak)
+[![Build Status](https://travis-ci.org/stackmob/scaliak.png?branch=master)](https://travis-ci.org/stackmob/scaliak)
 
 Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functional Twist. It is currently being used in production at StackMob.
 
