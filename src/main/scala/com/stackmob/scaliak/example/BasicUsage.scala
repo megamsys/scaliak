@@ -1,24 +1,35 @@
+/**
+ * Copyright 2012-2013 StackMob
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.stackmob.scaliak
 package example
 
 import scalaz._
 import Scalaz._
-import effects._ // not necessary unless you want to take advantage of IO monad
-
-/**
- * Created by IntelliJ IDEA.
- * User: jordanrw
- * Date: 12/16/11
- * Time: 11:15 AM
- */
+import effects._
+import org.slf4j.LoggerFactory
 
 object BasicUsage extends App {
+
+  private lazy val logger = LoggerFactory.getLogger(getClass)
 
   val client = Scaliak.httpClient("http://localhost:8091/riak")
   client.generateAndSetClientId() // always calls this or setClientId(Array[Byte]) after creating a client
 
   val bucket = client.bucket("scaliak-example").unsafePerformIO ||| { throw _ }
-
 
   // Store an object with no conversion
   // this is not the suggested way to use the client
@@ -32,28 +43,28 @@ object BasicUsage extends App {
 
   // fetch an object with no conversion
   bucket.fetch(key).unsafePerformIO match {
-    case Success(mbFetched) => println(mbFetched some { _.stringValue } none { "did not find key" })
+    case Success(mbFetched) => logger.debug(mbFetched some { _.stringValue } none { "did not find key" })
     case Failure(es) => throw es.head
   }
 
   // or you can take advantage of the IO Monad
   def printFetchRes(v: ValidationNEL[Throwable, Option[ReadObject]]): IO[Unit] = v match {
     case Success(mbFetched) => {
-      println(
+      logger.debug(
         mbFetched some { "fetched: " + _.stringValue } none { "key does not exist" }
       ).pure[IO]
     }
     case Failure(es) => {
-      (es foreach println).pure[IO]
+      (es.foreach(e => logger.warn(e.getMessage))).pure[IO]
     } 
   }
 
   val originalResult = for {
     mbFetchedOrErrors <- bucket.fetch(key)
     _ <- printFetchRes(mbFetchedOrErrors)
-    _ <- println("deleting").pure[IO]
+    _ <- logger.debug("deleting").pure[IO]
     _ <- bucket.deleteByKey(key)
   } yield (mbFetchedOrErrors.toOption | none)
-  println(originalResult.unsafePerformIO)
+  originalResult.unsafePerformIO
  
 }

@@ -1,3 +1,19 @@
+/**
+ * Copyright 2012-2013 StackMob
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.stackmob.scaliak.tests
 
 import org.specs2._
@@ -18,7 +34,7 @@ import query.indexes.{IntValueQuery, BinValueQuery, IndexQuery}
 // TODO: these specs really cover both ReadObject and ScaliakBucket, they should be split up
 class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUtils { def is =
   "Scaliak Bucket".title                                                            ^
-  """                                                                               ^
+  """
   This class provides the primary functionality for fetching data
   from and storing data in Riak.
   """                                                                               ^
@@ -445,7 +461,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       result // execute call
 
       extractor.argument must beSome.like {
-        case obj => obj.allIntIndexes.asScala.mapValues(_.asScala.toSet).toMap must beEqualTo(testStoreObject.intIndexes)
+        case obj => obj.allIntIndexesV2.asScala.mapValues(_.asScala.toSet).toMap must beEqualTo(testStoreObject.intIndexes)
       }
     }
 
@@ -577,10 +593,9 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     def writesButNoRead = {
       bucket.put(testStoreObject).unsafePerformIO // execute write only operation
 
-      there was no(rawClient).fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) then
+      there was no(rawClient).fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) `then`
         one(rawClient).store(MM.isA(classOf[IRiakObject]), MM.isA(classOf[StoreMeta]))
     }
-
 
     def usesPartialScaliakObjectVClock = {
       val newRawClient = mock[RawClientWithStreaming]
@@ -661,7 +676,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
     val testVTag = "test"
     val lastModified = new java.util.Date(System.currentTimeMillis)
-    val mockRiakObj1 = mockRiakObj(testBucket, testKey, "".getBytes(), "text/plain", "vclock", vTag = testVTag, lastModified = lastModified)
+    val mockRiakObj1 = mockRiakObj(testBucket, testKey, "".getBytes("utf-8"), "text/plain", "vclock", vTag = testVTag, lastModified = lastModified)
 
     val testStoreObject = new ReadObject(
       testKey,
