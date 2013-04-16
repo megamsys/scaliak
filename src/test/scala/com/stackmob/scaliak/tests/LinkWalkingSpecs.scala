@@ -179,7 +179,7 @@ class LinkWalkingSpecs extends Specification with Mockito with util.MockRiakUtil
       val walkAction = (bucket, obj) linkWalk lws --> lws2
       val extractor = new WalkSpecExtractor
       rawClient.linkWalk(MM.argThat(extractor)) returns createWalkResult()
-      walkAction.unsafePerformIO
+      walkAction.unsafePerformIO()
 
       extractor.argument must beSome.like {
         case spec => spec.getStartBucket must beEqualTo(lwsBucket)
@@ -192,7 +192,7 @@ class LinkWalkingSpecs extends Specification with Mockito with util.MockRiakUtil
       val walkAction = (bucket, obj) linkWalk lws --> lws2
       val extractor = new WalkSpecExtractor
       rawClient.linkWalk(MM.argThat(extractor)) returns createWalkResult()
-      walkAction.unsafePerformIO
+      walkAction.unsafePerformIO()
 
       extractor.argument must beSome.like {
         case spec => spec.getStartKey must beEqualTo(testKey)
@@ -205,7 +205,7 @@ class LinkWalkingSpecs extends Specification with Mockito with util.MockRiakUtil
       val walkAction = (bucket, obj) linkWalk lws --> lws2
       val extractor = new WalkSpecExtractor
       rawClient.linkWalk(MM.argThat(extractor)) returns createWalkResult()
-      walkAction.unsafePerformIO
+      walkAction.unsafePerformIO()
 
       import scala.collection.JavaConverters._
       extractor.argument must beSome.like {
@@ -225,7 +225,7 @@ class LinkWalkingSpecs extends Specification with Mockito with util.MockRiakUtil
       val walkAction = (bucket, obj) linkWalk lws
       rawClient.linkWalk(MM.isA(classOf[LinkWalkSpec])) returns createWalkResult(mockedValues)
 
-      walkAction.unsafePerformIO.toList map { _.toList map { _.stringValue } } must haveTheSameElementsAs(expectedValues)
+      walkAction.unsafePerformIO().toList map { _.toList map { _.stringValue } } must haveTheSameElementsAs(expectedValues)
     }
     
 
@@ -243,7 +243,7 @@ class LinkWalkingSpecs extends Specification with Mockito with util.MockRiakUtil
       val walkAction = (bucket, obj) linkWalk lws
       rawClient.linkWalk(MM.isA(classOf[LinkWalkSpec])) returns createWalkResult(finalMockedValues)
 
-      walkAction.unsafePerformIO.toList map { _.toList } must haveTheSameElementsAs(expectedValues)
+      walkAction.unsafePerformIO().toList map { _.toList } must haveTheSameElementsAs(expectedValues)
     }
 
     def createWalkResult(ls: List[List[IRiakObject]] = Nil) = {

@@ -18,7 +18,8 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-import effects._
+import scalaz.effect.IO
+import scalaz.syntax.effect._
 
 import org.apache.commons.pool._
 import org.apache.commons.pool.impl._
@@ -94,7 +95,7 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
              notFoundOk: NotFoundOkArgument = NotFoundOkArgument()): IO[Validation[Throwable, ScaliakBucket]] = {
     val metaArgs = List(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
 
-    val updateBucket = (metaArgs map { _.value.isDefined }).asMA.sum // update if more one or more arguments is passed in
+    val updateBucket = metaArgs.exists(_.value.isDefined) // update if more one or more arguments is passed in
 
     val fetchAction = secHTTPClient.fetchBucket(name).pure[IO]
     val fullAction = if (updateBucket) {

@@ -18,7 +18,7 @@ package com.stackmob.scaliak
 
 import com.basho.riak.client.raw.http.HTTPClientAdapter
 import scalaz.IterV
-import scalaz.effects.IO
+import scalaz.effect.IO
 import com.basho.riak.client.raw.query.MapReduceSpec
 
 class HTTPStreamingClient(url: String) extends HTTPClientAdapter(url) with RawClientWithStreaming {

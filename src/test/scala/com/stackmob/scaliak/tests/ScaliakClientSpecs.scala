@@ -20,7 +20,7 @@ import org.specs2._
 import mock._
 import scalaz._
 import Scalaz._
-import scalaz.effects._
+import scalaz.effect.IO
 import com.stackmob.scaliak.{RawClientWithStreaming, ScaliakClient}
 import java.io.IOException
 import com.basho.riak.client.raw.http.HTTPClientAdapter
@@ -132,39 +132,39 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
   val linkWalkFun = mock[NamedErlangFunction]; bucketProps.getLinkWalkFunction returns linkWalkFun
   val searchVal = false; bucketProps.getSearch returns searchVal
 
-  lazy val bucket = client.bucket(bucketName).unsafePerformIO.toOption
+  lazy val bucket = client.bucket(bucketName).unsafePerformIO().toOption
 
   def fetchSuccess = {
-    val mbBucket = client.bucket(bucketName).unsafePerformIO.toOption
+    val mbBucket = client.bucket(bucketName).unsafePerformIO().toOption
     mbBucket must beSome
   }
 
   def allowSibsSet = {
     bucketProps.getAllowSiblings returns true
-    val trueSibs = (client.bucket(bucketName).unsafePerformIO.toOption map { _.allowSiblings }) | false
+    val trueSibs = (client.bucket(bucketName).unsafePerformIO().toOption map { _.allowSiblings }) | false
     bucketProps.getAllowSiblings returns false
-    val falseSibs = (client.bucket(bucketName).unsafePerformIO.toOption map { _.allowSiblings }) | true
+    val falseSibs = (client.bucket(bucketName).unsafePerformIO().toOption map { _.allowSiblings }) | true
 
     (trueSibs, falseSibs) must beEqualTo(true, false)
   }
 
   def nullBackend = {
     bucketProps.getBackend returns null
-    client.bucket(bucketName).unsafePerformIO.toOption must beSome.like {
+    client.bucket(bucketName).unsafePerformIO().toOption must beSome.like {
       case b => b.backend must beNone
     }
   }
 
   def setBackend = {
     bucketProps.getBackend returns "some_backend"
-    client.bucket(bucketName).unsafePerformIO.toOption must beSome.like {
+    client.bucket(bucketName).unsafePerformIO().toOption must beSome.like {
       case b => b.backend must beSome.which { _ == "some_backend" }
     }
   }
 
   def nullPrecommit = {
     bucketProps.getPrecommitHooks returns null
-    client.bucket(bucketName).unsafePerformIO.toOption must beSome.like {
+    client.bucket(bucketName).unsafePerformIO().toOption must beSome.like {
       case b => b.precommitHooks must beEmpty
     }
   }
@@ -174,14 +174,14 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
     dummy.add(mock[NamedFunction])
     dummy.add(mock[NamedFunction])
     bucketProps.getPrecommitHooks returns dummy.asInstanceOf[java.util.Collection[NamedFunction]]
-    client.bucket(bucketName).unsafePerformIO.toOption must beSome.like {
+    client.bucket(bucketName).unsafePerformIO().toOption must beSome.like {
       case b => b.precommitHooks must haveSize(2)
     }
   }
 
   def nullPostcommit = {
     bucketProps.getPostcommitHooks returns null
-    client.bucket(bucketName).unsafePerformIO.toOption must beSome.like {
+    client.bucket(bucketName).unsafePerformIO().toOption must beSome.like {
       case b => b.postcommitHooks must beEmpty
     }
   }
@@ -190,20 +190,20 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
     val dummy = new java.util.LinkedList[NamedErlangFunction]
     dummy.add(mock[NamedErlangFunction])
     bucketProps.getPostcommitHooks returns dummy.asInstanceOf[java.util.Collection[NamedErlangFunction]]
-    client.bucket(bucketName).unsafePerformIO.toOption must beSome.like {
+    client.bucket(bucketName).unsafePerformIO().toOption must beSome.like {
       case b => b.postcommitHooks must haveSize(1)
     }
   }
 
   def fetchFailure = {
     rawClient.fetchBucket(bucketName) throws (new IOException) thenReturns bucketProps // put the mock back in its original state after throwing
-    val notBucket = client.bucket(bucketName).unsafePerformIO.either
+    val notBucket = client.bucket(bucketName).unsafePerformIO().either
     notBucket must beLeft
   }
 
   def listBucketsEmpty = {
     rawClient.listBuckets() returns (new java.util.HashSet[String]())
-    client.listBuckets.unsafePerformIO must beEmpty
+    client.listBuckets.unsafePerformIO() must beEmpty
   }
   
   def listBucketsNonEmpty = {
@@ -212,23 +212,23 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
     s.add("bucketname2")
     rawClient.listBuckets() returns s
     
-    client.listBuckets.unsafePerformIO must haveTheSameElementsAs("bucketname" :: "bucketname2" :: Nil)
+    client.listBuckets.unsafePerformIO() must haveTheSameElementsAs("bucketname" :: "bucketname2" :: Nil)
   }
   
   def listBucketsException = {
     rawClient.listBuckets() throws new NullPointerException
-    client.listBuckets.unsafePerformIO must throwA[NullPointerException]
+    client.listBuckets.unsafePerformIO() must throwA[NullPointerException]
   }
 
   def takesMetaProps = {
     // this test is crap but cant write an extractor for an argument for a function we cant stub
-    client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO
+    client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO()
 
     there was one(rawClient).updateBucket(MM.eq(bucketName), MM.isA(classOf[BucketProperties]))
   }
 
   def returnsOnUpdate = {
-    val r = client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO
+    val r = client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO()
 
     r.toOption must beSome
   }
@@ -237,14 +237,14 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
   def failsOnFetchException = {
     rawClient.fetchBucket(bucketName) throws (new IOException) thenReturns bucketProps // put the mock back in its original state after
 
-    val r = client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO
+    val r = client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO()
     r.either must beLeft
   }
 
   def failsOnUpdateException = {
     rawClient.updateBucket(MM.eq(bucketName), MM.isA(classOf[BucketProperties])) throws (new IOException)
 
-    val r = client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO
+    val r = client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO()
     r.either must beLeft
   }
 

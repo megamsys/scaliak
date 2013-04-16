@@ -11,9 +11,9 @@ name := "scaliak"
 
 organization := "com.stackmob"
 
-scalaVersion := "2.9.1"
+scalaVersion := "2.10.1"
 
-crossScalaVersions := Seq("2.9.1", "2.9.2", "2.10.0", "2.10.1")
+crossScalaVersions := Seq("2.10.0", "2.10.1")
 
 scalacOptions <++= (scalaVersion).map { version: String =>
   val defaults = Seq("-unchecked", "-deprecation")
@@ -24,16 +24,22 @@ scalacOptions <++= (scalaVersion).map { version: String =>
   }
 }
 
-libraryDependencies ++= Seq(		          
-  "org.scalaz" %% "scalaz-core" % "6.0.4",
-  "net.liftweb" %% "lift-json-scalaz" % "2.5-RC2",
-  "com.basho.riak" % "riak-client" % "1.1.0",
-  "commons-pool" % "commons-pool" % "1.6",
-  "org.slf4j" % "slf4j-api" % "1.7.5",
-  "org.specs2" %% "specs2" % "1.12.3" % "test",
-  "org.pegdown" % "pegdown" % "1.0.2" % "test",
-  "org.mockito" % "mockito-all" % "1.9.0" % "test"
-)
+libraryDependencies ++= {
+  val scalazVersion = "7.0.0-RC2"
+  Seq(
+    "org.scalaz" %% "scalaz-core" % scalazVersion,
+    "org.scalaz" %% "scalaz-iteratee" % scalazVersion,
+    "org.scalaz" %% "scalaz-effect" % scalazVersion,
+    "org.scalaz" %% "scalaz-iterv" % scalazVersion,
+    "net.liftweb" %% "lift-json-scalaz7" % "2.5-RC4",
+    "com.basho.riak" % "riak-client" % "1.1.0",
+    "commons-pool" % "commons-pool" % "1.6",
+    "org.slf4j" % "slf4j-api" % "1.7.5",
+    "org.specs2" %% "specs2" % "1.12.3" % "test",
+    "org.pegdown" % "pegdown" % "1.0.2" % "test",
+    "org.mockito" % "mockito-all" % "1.9.0" % "test"
+  )
+}
 
 logBuffered := false
 

@@ -66,9 +66,9 @@ Scaliak is built on top of the `RawClient` interface that underlies the High-Lev
 
 ## Warm Fuzzy IO
 
-Scaliak makes heavy use of `IO` from Scalaz to represent all calls to the `RawClient` and therefore Riak. You do not need to know how to use `IO` save one method, `unsafePerformIO`. This is the equivalent of `RiakOperation<T>`s `execute` method. If you do not call it, nothing will happen. 
+Scaliak makes heavy use of `IO` from Scalaz to represent all calls to the `RawClient` and therefore Riak. You do not need to know how to use `IO` save one method, `unsafePerformIO()`. This is the equivalent of `RiakOperation<T>`s `execute` method. If you do not call it, nothing will happen.
 
-Using IO does have some other benefits you can take advantage of, if you want to sequence Riak actions and perform some computations in between or as a result but this can also be done just using `unsafePerformIO`. 
+Using IO does have some other benefits you can take advantage of, if you want to sequence Riak actions and perform some computations in between or as a result but this can also be done just using `unsafePerformIO()`.
 
 All `IO` actions returned are setup to handle any exception thrown in the process, this is why they will typically have a type like `IO[Validation[E, A]]` where `E` is some exception.
 
