@@ -19,16 +19,10 @@ package com.stackmob.scaliak
 import scalaz._
 import Scalaz._
 import scalaz.effect.IO
-import scalaz.syntax.effect._
-
 import org.apache.commons.pool._
 import org.apache.commons.pool.impl._
-
 import java.io.IOException
-
 import com.basho.riak.client.raw.http.HTTPClientAdapter
-import com.basho.riak.client.raw.pbc.PBClientAdapter
-
 import com.basho.riak.client.http.response.RiakIORuntimeException
 import com.basho.riak.client.query.functions.{ NamedErlangFunction, NamedFunction }
 import com.basho.riak.client.bucket.BucketProperties
