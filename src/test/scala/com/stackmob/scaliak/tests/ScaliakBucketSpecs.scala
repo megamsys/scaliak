@@ -19,6 +19,7 @@ package com.stackmob.scaliak.tests
 import org.specs2._
 import mock._
 import scalaz._
+import scalaz.NonEmptyList._
 import Scalaz._
 import scalaz.effect.IO
 import com.basho.riak.client.query.functions.NamedErlangFunction
@@ -642,7 +643,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       testContentType,
       mockVClock,
       "".getBytes,
-      links = nel(ScaliakLink("test", "test", "test")).some,
+      links = nels(ScaliakLink("test", "test", "test")).some,
       metadata = Map("m1" -> "v1", "m2" -> "v2"),
       binIndexes = Map(BinIndex.named("idx1") -> Set("a", "b"), BinIndex.named("idx2") -> Set("d", "e")),
       intIndexes = Map(IntIndex.named("idx1") -> Set(1), IntIndex.named("idx2") -> Set(3,4))
@@ -684,7 +685,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       testContentType,
       null,
       "".getBytes,
-      links = nel(ScaliakLink("test", "test", "test")).some,
+      links = nels(ScaliakLink("test", "test", "test")).some,
       metadata = Map("m1" -> "v1", "m2" -> "v2"),
       vTag = testVTag,
       lastModified = lastModified
@@ -838,7 +839,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     def testDefaultConflictRes = {
       val r = bucket.fetch(testKey).unsafePerformIO()
 
-      r.either must beLeft.like {
+      r.toEither must beLeft.like {
         case e => ((_: Throwable) must beAnInstanceOf[UnresolvedConflictException]).forall(e.list)
       }
     }

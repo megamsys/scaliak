@@ -17,7 +17,6 @@
 package com.stackmob.scaliak.linkwalk
 
 import scalaz._
-import scalaz.NonEmptyList._
 import Scalaz._
 import com.basho.riak.client.query.LinkWalkStep.Accumulate
 import com.stackmob.scaliak.{ScaliakConverter, ReadObject, ScaliakBucket}

@@ -197,7 +197,7 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
 
   def fetchFailure = {
     rawClient.fetchBucket(bucketName) throws (new IOException) thenReturns bucketProps // put the mock back in its original state after throwing
-    val notBucket = client.bucket(bucketName).unsafePerformIO().either
+    val notBucket = client.bucket(bucketName).unsafePerformIO().toEither
     notBucket must beLeft
   }
 
@@ -238,14 +238,14 @@ class ScaliakClientSpecs extends Specification with Mockito { def is = args(sequ
     rawClient.fetchBucket(bucketName) throws (new IOException) thenReturns bucketProps // put the mock back in its original state after
 
     val r = client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO()
-    r.either must beLeft
+    r.toEither must beLeft
   }
 
   def failsOnUpdateException = {
     rawClient.updateBucket(MM.eq(bucketName), MM.isA(classOf[BucketProperties])) throws (new IOException)
 
     val r = client.bucket(bucketName, nVal = 2, r = 2, w = 2, rw = 3, dw = 3).unsafePerformIO()
-    r.either must beLeft
+    r.toEither must beLeft
   }
 
   def setClientId = {

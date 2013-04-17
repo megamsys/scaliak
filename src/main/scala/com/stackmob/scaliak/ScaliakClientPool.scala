@@ -101,7 +101,7 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
     val fullAction = if (updateBucket) {
       secHTTPClient.updateBucket(name,
         createUpdateBucketProps(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
-      ).pure[IO] >>=| fetchAction
+      ).pure[IO].flatMap(_ => fetchAction)
     } else {
       fetchAction
     }
@@ -115,10 +115,7 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
         case t: RiakIORuntimeException => t.getCause.some
         case _                         => none
       }
-    } map { _ match {
-      case Left(e) => e.fail
-      case Right(s) => s.success
-    }}
+    } map { _.validation }
   }
   
   private def buildBucket(b: BucketProperties, name: String) = {

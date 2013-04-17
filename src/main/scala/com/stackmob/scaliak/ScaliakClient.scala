@@ -19,7 +19,6 @@ package com.stackmob.scaliak
 import scalaz._
 import Scalaz._
 import scalaz.effect.IO
-import scalaz.syntax.bind._
 import com.basho.riak.client.raw.RawClient
 import java.io.IOException
 import com.basho.riak.client.http.response.RiakIORuntimeException
@@ -57,7 +56,7 @@ class ScaliakClient(rawClient: RawClientWithStreaming, secHTTPClient: Option[Raw
     val fullAction = if (updateBucket) {
       bucketPropertyClient.updateBucket(name,
         createUpdateBucketProps(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
-      ).pure[IO] >>=| fetchAction
+      ).pure[IO].flatMap(_ => fetchAction)
     } else {
       fetchAction
     }
@@ -70,10 +69,7 @@ class ScaliakClient(rawClient: RawClientWithStreaming, secHTTPClient: Option[Raw
         case t: RiakIORuntimeException => t.getCause.some
         case _                         => none
       }
-    } map { _ match {
-      case Left(e) => e.fail
-      case Right(s) => s.success
-    }}
+    } map { _.validation }
   }
 
   // this method causes side effects and may throw
