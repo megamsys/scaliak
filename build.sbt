@@ -15,14 +15,14 @@ scalaVersion := "2.10.1"
 
 crossScalaVersions := Seq("2.10.0", "2.10.1")
 
-scalacOptions <++= (scalaVersion).map { version: String =>
-  val defaults = Seq("-unchecked", "-deprecation")
-  if (version.startsWith("2.10")) {
-    defaults ++ Seq("-feature", "-language:implicitConversions,", "-language:higherKinds", "-language:reflectiveCalls")
-  } else {
-    defaults
-  }
-}
+scalacOptions := Seq(
+  "-unchecked",
+  "-deprecation",
+  "-feature",
+  "-language:implicitConversions,",
+  "-language:higherKinds",
+  "-language:reflectiveCalls"
+)
 
 libraryDependencies ++= {
   val scalazVersion = "7.0.0-RC2"
