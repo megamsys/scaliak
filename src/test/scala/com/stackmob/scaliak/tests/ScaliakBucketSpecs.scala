@@ -594,7 +594,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     def writesButNoRead = {
       bucket.put(testStoreObject).unsafePerformIO() // execute write only operation
 
-      there was no(rawClient).fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) `then`
+      there was no(rawClient).fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) andThen
         one(rawClient).store(MM.isA(classOf[IRiakObject]), MM.isA(classOf[StoreMeta]))
     }
 

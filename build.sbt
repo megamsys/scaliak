@@ -17,7 +17,7 @@ scalacOptions := Seq(
   "-unchecked",
   "-deprecation",
   "-feature",
-  "-language:implicitConversions,",
+  "-language:implicitConversions",
   "-language:higherKinds",
   "-language:reflectiveCalls"
 )
@@ -33,7 +33,7 @@ libraryDependencies ++= {
     "com.basho.riak" % "riak-client" % "1.1.0",
     "commons-pool" % "commons-pool" % "1.6",
     "org.slf4j" % "slf4j-api" % "1.7.5",
-    "org.specs2" %% "specs2" % "1.12.3" % "test",
+    "org.specs2" %% "specs2" % "1.14" % "test",
     "org.pegdown" % "pegdown" % "1.0.2" % "test",
     "org.mockito" % "mockito-all" % "1.9.0" % "test"
   )
