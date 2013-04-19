@@ -13,8 +13,6 @@ organization := "com.stackmob"
 
 scalaVersion := "2.10.1"
 
-crossScalaVersions := Seq("2.10.0", "2.10.1")
-
 scalacOptions := Seq(
   "-unchecked",
   "-deprecation",
