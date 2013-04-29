@@ -23,7 +23,7 @@ scalacOptions := Seq(
 )
 
 libraryDependencies ++= {
-  val scalazVersion = "7.0.0-RC2"
+  val scalazVersion = "7.0.0"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
     "org.scalaz" %% "scalaz-iteratee" % scalazVersion,
