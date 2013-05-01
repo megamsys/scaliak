@@ -19,8 +19,9 @@ package com.stackmob.scaliak.tests
 import org.specs2._
 import mock._
 import scalaz._
+import scalaz.NonEmptyList._
 import Scalaz._
-import effects._
+import scalaz.effect.IO
 import com.basho.riak.client.query.functions.NamedErlangFunction
 import com.basho.riak.client.cap.{UnresolvedConflictException, VClock, Quorum}
 import org.mockito.{Matchers => MM}
@@ -267,7 +268,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       testResults.add("key12")
       client.fetchIndex(MM.argThat(extractor)) returns testResults
 
-      b.fetchIndexByValue(index = testIdx, value = testBinVal).unsafePerformIO.toOption // execute
+      b.fetchIndexByValue(index = testIdx, value = testBinVal).unsafePerformIO().toOption // execute
       extractor.argument must beSome.like {
         case obj: BinValueQuery => (obj.getBucket must beEqualTo(bucket.name)) and (obj.getIndex must beEqualTo(testIdx + "_bin")) and (obj.getValue must beEqualTo(testBinVal))
       }
@@ -282,7 +283,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       val testResults: java.util.List[String] = new java.util.LinkedList[String]()
       client.fetchIndex(MM.argThat(extractor)) returns testResults
 
-      b.fetchIndexByValue(index = testIdx, value = testIntVal).unsafePerformIO.toOption // execute
+      b.fetchIndexByValue(index = testIdx, value = testIntVal).unsafePerformIO().toOption // execute
       extractor.argument must beSome.like {
         case obj: IntValueQuery => (obj.getBucket must beEqualTo(bucket.name)) and (obj.getIndex must beEqualTo(testIdx + "_int")) and (obj.getValue must beEqualTo(testIntVal))
       }
@@ -298,7 +299,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       testResults.add("2")
       client.fetchIndex(any) returns testResults
 
-      b.fetchIndexByValue(index = testIdx, value = indexVal).map(_.toOption).unsafePerformIO must beSome.like {
+      b.fetchIndexByValue(index = testIdx, value = indexVal).map(_.toOption).unsafePerformIO() must beSome.like {
         case res => res must beEqualTo(testResults.asScala.toList)
       }
     }
@@ -311,7 +312,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
     class DeleteMetaArgExtractor extends util.MockitoArgumentExtractor[DeleteMeta]
     
-    lazy val result = bucket.deleteByKey(testKey, fetchBefore = true).unsafePerformIO
+    lazy val result = bucket.deleteByKey(testKey, fetchBefore = true).unsafePerformIO()
 
     val extractor = new DeleteMetaArgExtractor
     (rawClient.delete(MM.eq(testBucket), MM.eq(testKey), MM.argThat(extractor))
@@ -339,7 +340,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
     val obj = new DummyDomainObject(testKey)
     implicit val converter = dummyDomainConverter
-    lazy val result = bucket.delete(obj).unsafePerformIO
+    lazy val result = bucket.delete(obj).unsafePerformIO()
 
     def test = {
       result
@@ -352,7 +353,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     val bucket = createBucket
 
     val obj = ReadObject(testKey, testBucket, testContentType, mock[VClock], "".getBytes)
-    lazy val result = bucket.delete(obj).unsafePerformIO
+    lazy val result = bucket.delete(obj).unsafePerformIO()
 
     def test = {
       result
@@ -364,7 +365,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     val rawClient = mock[RawClientWithStreaming]
     val bucket = createBucket
 
-    lazy val result = bucket.deleteByKey(testKey).unsafePerformIO
+    lazy val result = bucket.deleteByKey(testKey).unsafePerformIO()
 
     def test = {
       result
@@ -377,7 +378,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     val mockStoreObj = mockRiakObj(testBucket, testKey, testStoreObject.getBytes, testContentType, mock2VClockStr)
     val mockStoreResponse = mockRiakResponse(Array(mockStoreObj))
 
-    override lazy val result = bucket.store(testStoreObject, returnBody = true).unsafePerformIO
+    override lazy val result = bucket.store(testStoreObject, returnBody = true).unsafePerformIO()
 
     val mock1VClockStr = "vclock1"
     val mockFetchObj = mockRiakObj(testBucket, testKey, "abc".getBytes, testContentType, mock1VClockStr)
@@ -402,7 +403,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     val mockFetchVClockStr = ""
     rawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockRiakResponse(Array())
 
-    override lazy val result = bucket.store(testStoreObject, returnBody = true).unsafePerformIO
+    override lazy val result = bucket.store(testStoreObject, returnBody = true).unsafePerformIO()
 
     val extractor = new IRiakObjExtractor
     rawClient.store(MM.argThat(extractor), MM.isA(classOf[StoreMeta])) returns mockStoreResponse
@@ -479,7 +480,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
           n.copy(bytes = fakeValue.getBytes)
         }
       }
-      newBucket.store(testStoreObject).unsafePerformIO
+      newBucket.store(testStoreObject).unsafePerformIO()
 
       newExtractor.argument must beSome.like {
         case obj => obj.getValueAsString must_== fakeValue
@@ -495,7 +496,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       newRawClient.store(MM.argThat(newExtractor), MM.isA(classOf[StoreMeta])) returns mockStoreResponse
 
       implicit val converter = dummyDomainConverter
-      newBucket.store(new DummyDomainObject(testKey)).unsafePerformIO
+      newBucket.store(new DummyDomainObject(testKey)).unsafePerformIO()
       
       newExtractor.argument must beSome.like {
         case o => o.getValueAsString must beEqualTo(dummyWriteVal)
@@ -512,7 +513,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
       implicit val converter = dummyDomainConverter
       implicit val mutation = dummyDomainMutation
-      newBucket.store(new DummyDomainObject(testKey)).unsafePerformIO
+      newBucket.store(new DummyDomainObject(testKey)).unsafePerformIO()
 
       newExtractor.argument must beSome.like {
         case o => o.getKey must beEqualTo(testKey + mutationValueAddition)
@@ -545,7 +546,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
           n.copy(bytes = fakeValue.getBytes)
         }
       }
-      newBucket.store(testStoreObject).unsafePerformIO
+      newBucket.store(testStoreObject).unsafePerformIO()
             
       newExtractor.argument must beSome.like {
         case obj => obj.getValueAsString must_== fakeValue
@@ -561,7 +562,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       newRawClient.store(MM.argThat(newExtractor), MM.isA(classOf[StoreMeta])) returns mockStoreResponse
 
       implicit val converter = dummyDomainConverter
-      newBucket.store(new DummyDomainObject(testKey)).unsafePerformIO
+      newBucket.store(new DummyDomainObject(testKey)).unsafePerformIO()
 
       newExtractor.argument must beSome.like {
         case o => o.getValueAsString must beEqualTo(dummyWriteVal)
@@ -578,7 +579,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
       implicit val converter = dummyDomainConverter
       implicit val mutation = dummyDomainMutation
-      newBucket.store(new DummyDomainObject(testKey)).unsafePerformIO
+      newBucket.store(new DummyDomainObject(testKey)).unsafePerformIO()
 
       newExtractor.argument must beSome.like {
         case o => o.getKey must beEqualTo(testKey + mutationValueAddition)
@@ -591,9 +592,9 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     val extractor = new IRiakObjExtractor
 
     def writesButNoRead = {
-      bucket.put(testStoreObject).unsafePerformIO // execute write only operation
+      bucket.put(testStoreObject).unsafePerformIO() // execute write only operation
 
-      there was no(rawClient).fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) `then`
+      there was no(rawClient).fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) andThen
         one(rawClient).store(MM.isA(classOf[IRiakObject]), MM.isA(classOf[StoreMeta]))
     }
 
@@ -609,7 +610,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
         obj => WriteObject(obj.key, obj.bytes, vClock = mockVClock.some)
       )
 
-      newBucket.put(testStoreObject).unsafePerformIO
+      newBucket.put(testStoreObject).unsafePerformIO()
 
       extractor.argument must beSome.like {
         case o => o.getVClock.asString must_== "test"
@@ -631,7 +632,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     }
     
 
-    lazy val result = bucket.store(testStoreObject).unsafePerformIO
+    lazy val result = bucket.store(testStoreObject).unsafePerformIO()
 
     val mockVClock = mock[VClock]
     mockVClock.getBytes returns Array[Byte]()
@@ -642,7 +643,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       testContentType,
       mockVClock,
       "".getBytes,
-      links = nel(ScaliakLink("test", "test", "test")).some,
+      links = nels(ScaliakLink("test", "test", "test")).some,
       metadata = Map("m1" -> "v1", "m2" -> "v2"),
       binIndexes = Map(BinIndex.named("idx1") -> Set("a", "b"), BinIndex.named("idx2") -> Set("d", "e")),
       intIndexes = Map(IntIndex.named("idx1") -> Set(1), IntIndex.named("idx2") -> Set(3,4))
@@ -684,7 +685,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       testContentType,
       null,
       "".getBytes,
-      links = nel(ScaliakLink("test", "test", "test")).some,
+      links = nels(ScaliakLink("test", "test", "test")).some,
       metadata = Map("m1" -> "v1", "m2" -> "v2"),
       vTag = testVTag,
       lastModified = lastModified
@@ -707,30 +708,30 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       extractor
     }
     
-    def testArg(f: ScaliakBucket => IO[ValidationNEL[Throwable, Option[ReadObject]]]): FetchMetaExtractor = {
+    def testArg(f: ScaliakBucket => IO[ValidationNel[Throwable, Option[ReadObject]]]): FetchMetaExtractor = {
       val rawClient = mock[RawClientWithStreaming]
       val ex = initExtractor(rawClient)
       val bucket = createBucketWithClient(rawClient)
-      f(bucket).unsafePerformIO
+      f(bucket).unsafePerformIO()
       ex
     }
 
-    def testWriteArg(f: ScaliakBucket => IO[ValidationNEL[Throwable, Option[ReadObject]]]): StoreMetaExtractor = {
+    def testWriteArg(f: ScaliakBucket => IO[ValidationNel[Throwable, Option[ReadObject]]]): StoreMetaExtractor = {
       val rawClient = mock[RawClientWithStreaming]
       val ex = initWriteExtractor(rawClient)
       val bucket = createBucketWithClient(rawClient)
-      f(bucket).unsafePerformIO
+      f(bucket).unsafePerformIO()
 
       ex
     }
 
-    def testDefaultFetchMetaBase[T](metaProp: FetchMeta => T, f: ScaliakBucket => IO[ValidationNEL[Throwable, Option[ReadObject]]]) = {
+    def testDefaultFetchMetaBase[T](metaProp: FetchMeta => T, f: ScaliakBucket => IO[ValidationNel[Throwable, Option[ReadObject]]]) = {
       testArg(f).argument must beSome.like {
         case meta => metaProp(meta) must beNull
       }
     }
     
-    def testDefaultStoreMetaBase[T](metaProp: StoreMeta => T, f: ScaliakBucket => IO[ValidationNEL[Throwable, Option[ReadObject]]]) = {
+    def testDefaultStoreMetaBase[T](metaProp: StoreMeta => T, f: ScaliakBucket => IO[ValidationNel[Throwable, Option[ReadObject]]]) = {
       testWriteArg(f).argument must beSome.like {
         case meta => metaProp(meta) must beNull
       }
@@ -744,13 +745,13 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     def testPutDefaultStoreMeta[T](metaProp: StoreMeta => T) = testDefaultStoreMetaBase(metaProp, _.put(testStoreObject))
 
 
-    def testPassedFetchMeta[T](f: ScaliakBucket => IO[ValidationNEL[Throwable, Option[ReadObject]]], metaProp: FetchMeta => T, expected: T) = {
+    def testPassedFetchMeta[T](f: ScaliakBucket => IO[ValidationNel[Throwable, Option[ReadObject]]], metaProp: FetchMeta => T, expected: T) = {
       testArg(f).argument must beSome.like {
         case meta => metaProp(meta) must beEqualTo(expected)
       }
     }
 
-    def testPassedStoreMeta[T](f: ScaliakBucket => IO[ValidationNEL[Throwable, Option[ReadObject]]], metaProp: StoreMeta => T, expected: T) = {
+    def testPassedStoreMeta[T](f: ScaliakBucket => IO[ValidationNel[Throwable, Option[ReadObject]]], metaProp: StoreMeta => T, expected: T) = {
       testWriteArg(f).argument must beSome.like {
         case meta => metaProp(meta) must beEqualTo(expected)
       }
@@ -836,9 +837,9 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
 
     def testDefaultConflictRes = {
-      val r = bucket.fetch(testKey).unsafePerformIO
+      val r = bucket.fetch(testKey).unsafePerformIO()
 
-      r.either must beLeft.like {
+      r.toEither must beLeft.like {
         case e => ((_: Throwable) must beAnInstanceOf[UnresolvedConflictException]).forall(e.list)
       }
     }
@@ -855,7 +856,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     rawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockResp
 
     lazy val result: Option[ReadObject] = {
-      val r: ValidationNEL[Throwable, Option[ReadObject]] = bucket.fetch(testKey).unsafePerformIO
+      val r: ValidationNel[Throwable, Option[ReadObject]] = bucket.fetch(testKey).unsafePerformIO()
 
       r.toOption | None
     }
@@ -905,7 +906,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     lazy val result: Option[ReadObject] = {
       bucket.fetch(testKey)
         .map(_.toOption | None)
-        .unsafePerformIO
+        .unsafePerformIO()
     }
 
     def testHasAll = {
@@ -944,7 +945,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     lazy val result: Option[ReadObject] = {
       bucket.fetch(testKey)
         .map(_.toOption | None)
-        .unsafePerformIO
+        .unsafePerformIO()
     }
 
     def testHasAll = {
@@ -981,7 +982,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
     rawClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) returns mockResp
 
     lazy val result: Option[ReadObject] = {
-      val r: ValidationNEL[Throwable, Option[ReadObject]] = bucket.fetch(testKey).unsafePerformIO
+      val r: ValidationNel[Throwable, Option[ReadObject]] = bucket.fetch(testKey).unsafePerformIO()
 
       r.toOption | None
     }
@@ -1140,7 +1141,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
     def testConversionExplicit = {
       // this will fail unti you start explicitly passing a resolver
-      val r = bucket.fetch(testKey)(dummyDomainConverter, ScaliakResolver.DefaultResolver).unsafePerformIO
+      val r = bucket.fetch(testKey)(dummyDomainConverter, ScaliakResolver.DefaultResolver).unsafePerformIO()
 
       (r.toOption | None) aka "the optional result discarding the exceptions" must beSome.which {
         _.someField == testKey
@@ -1149,7 +1150,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
     def testConversionImplicit = {
       implicit val converter = dummyDomainConverter
-      val r: ValidationNEL[Throwable, Option[DummyDomainObject]] = bucket.fetch(testKey).unsafePerformIO
+      val r: ValidationNel[Throwable, Option[DummyDomainObject]] = bucket.fetch(testKey).unsafePerformIO()
 
       (r.toOption | None) aka "the optional result discarding the exceptions" must beSome.which {
         _.someField == testKey
@@ -1160,7 +1161,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
       val newClient = mock[RawClientWithStreaming]
       val newBucket = createBucketWithClient(newClient)
       newClient.fetch(MM.eq(testBucket), MM.eq(testKey), MM.isA(classOf[FetchMeta])) throws (new NullPointerException)
-      newBucket.fetchDangerous(testKey).unsafePerformIO must throwA[NullPointerException]
+      newBucket.fetchDangerous(testKey).unsafePerformIO() must throwA[NullPointerException]
     }
     
     def testUnsafe = {
@@ -1169,7 +1170,7 @@ class ScaliakBucketSpecs extends Specification with Mockito with util.MockRiakUt
 
     // the result after discarding any possible exceptions
     lazy val result: Option[ReadObject] = {
-      val r: ValidationNEL[Throwable, Option[ReadObject]] = bucket.fetch(testKey).unsafePerformIO
+      val r: ValidationNel[Throwable, Option[ReadObject]] = bucket.fetch(testKey).unsafePerformIO()
 
       r.toOption | None
     }

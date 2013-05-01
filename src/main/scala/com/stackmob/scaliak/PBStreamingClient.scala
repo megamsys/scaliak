@@ -21,10 +21,10 @@ import com.basho.riak.pbc.{RiakClient => PBRiakClient, MapReduceResponseSource, 
 import com.basho.riak.client.raw.query.MapReduceSpec
 import com.basho.riak.pbc.mapreduce.MapReduceResponse
 import com.basho.riak.client.http.util.Constants
+import scalaz.IterV
 import scalaz.IterV._
-import scalaz.{Empty => _, _}
-import effects.IO
-import Scalaz._
+import scalaz.effect.IO
+import scalaz.syntax.monad._
 import com.fasterxml.jackson.databind.ObjectMapper
 import annotation.tailrec
 import scala.collection.JavaConverters._

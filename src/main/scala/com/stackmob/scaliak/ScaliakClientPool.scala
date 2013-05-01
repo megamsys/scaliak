@@ -18,16 +18,11 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-import effects._
-
+import scalaz.effect.IO
 import org.apache.commons.pool._
 import org.apache.commons.pool.impl._
-
 import java.io.IOException
-
 import com.basho.riak.client.raw.http.HTTPClientAdapter
-import com.basho.riak.client.raw.pbc.PBClientAdapter
-
 import com.basho.riak.client.http.response.RiakIORuntimeException
 import com.basho.riak.client.query.functions.{ NamedErlangFunction, NamedFunction }
 import com.basho.riak.client.bucket.BucketProperties
@@ -39,7 +34,7 @@ abstract class ScaliakClientPool {
 
 private class ScaliakPbClientFactory(host: String, port: Int) extends PoolableObjectFactory[Object] {
 
-  override def makeObject(): Object = new PBClientAdapter(host, port)
+  override def makeObject(): Object = new PBStreamingClient(host, port)
 
   override def destroyObject(sc: Object) {
 	  sc.asInstanceOf[RawClientWithStreaming].shutdown()
@@ -94,13 +89,13 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
              notFoundOk: NotFoundOkArgument = NotFoundOkArgument()): IO[Validation[Throwable, ScaliakBucket]] = {
     val metaArgs = List(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
 
-    val updateBucket = (metaArgs map { _.value.isDefined }).asMA.sum // update if more one or more arguments is passed in
+    val updateBucket = metaArgs.exists(_.value.isDefined) // update if more one or more arguments is passed in
 
     val fetchAction = secHTTPClient.fetchBucket(name).pure[IO]
     val fullAction = if (updateBucket) {
       secHTTPClient.updateBucket(name,
         createUpdateBucketProps(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
-      ).pure[IO] >>=| fetchAction
+      ).pure[IO].flatMap(_ => fetchAction)
     } else {
       fetchAction
     }
@@ -114,10 +109,7 @@ class ScaliakPbClientPool(host: String, port: Int, httpPort: Int) extends Scalia
         case t: RiakIORuntimeException => t.getCause.some
         case _                         => none
       }
-    } map { _ match {
-      case Left(e) => e.fail
-      case Right(s) => s.success
-    }}
+    } map { _.validation }
   }
   
   private def buildBucket(b: BucketProperties, name: String) = {

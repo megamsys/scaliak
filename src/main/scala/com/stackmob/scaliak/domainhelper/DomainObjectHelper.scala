@@ -18,21 +18,20 @@ package com.stackmob.scaliak.domainhelper
 
 import scalaz._
 import Scalaz._
-import effects._
+import scalaz.effect.IO
 import com.stackmob.scaliak.mapreduce._
 import com.stackmob.scaliak.mapreduce.MapReduceFunctions._
 
-import com.stackmob.scaliak.ScaliakConverter
-import com.stackmob.scaliak.ScaliakPbClientPool
+import com.stackmob.scaliak.{ScaliakBucket, ScaliakConverter, ScaliakPbClientPool}
 import com.basho.riak.client.query.MapReduceResult
 import net.liftweb.json._
 import net.liftweb.json.scalaz.JsonScalaz._
 
 abstract class DomainObjectHelper[T](val clientPool: ScaliakPbClientPool, val bucketname: String)
                                     (implicit domainConverter: ScaliakConverter[T], json: JSON[T]) {
-  val bucket = clientPool.bucket(bucketname).unsafePerformIO ||| { throw _ }
+  val bucket = clientPool.bucket(bucketname).unsafePerformIO() valueOr { throw _ }
 
-  def fetch(key: String): IO[ValidationNEL[Throwable, Option[T]]] = bucket.fetch(key)
+  def fetch(key: String): IO[ValidationNel[Throwable, Option[T]]] = bucket.fetch(key)
 
   implicit def mapReduceResultToObjectList(mrr: MapReduceResult): Option[List[T]] = parseOpt(mrr.getResultRaw).flatMap(fromJSON[List[T]](_).toOption)
 

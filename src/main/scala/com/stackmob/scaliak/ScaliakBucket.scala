@@ -18,7 +18,7 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-import effects._
+import scalaz.effect.IO
 import com.basho.riak.client.query.functions.{NamedFunction, NamedErlangFunction}
 import scala.collection.JavaConverters._
 import com.basho.riak.client.cap.{UnresolvedConflictException, Quorum}
@@ -90,7 +90,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
                basicQuorum: BasicQuorumArgument = BasicQuorumArgument(),
                returnDeletedVClock: ReturnDeletedVCLockArgument = ReturnDeletedVCLockArgument(),
                ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
-               ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
+               ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNel[Throwable, Option[T]]] = {
     fetchDangerous(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) except {
       _.failNel[Option[T]].pure[IO]
     }
@@ -109,7 +109,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
                         basicQuorum: BasicQuorumArgument = BasicQuorumArgument(),
                         returnDeletedVClock: ReturnDeletedVCLockArgument = ReturnDeletedVCLockArgument(),
                         ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
-                        ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
+                        ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNel[Throwable, Option[T]]] = {
     rawFetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) map {
       riakResponseToResult(_)
     }
@@ -117,7 +117,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
   }
 
   /*
-   * Same as calling fetch and immediately calling unsafePerformIO
+   * Same as calling fetch and immediately calling unsafePerformIO()
    * Because fetch handles exceptions this method typically will not throw
    * (but if you wish to be extra cautious it may)
    */
@@ -128,8 +128,8 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
                      basicQuorum: BasicQuorumArgument = BasicQuorumArgument(),
                      returnDeletedVClock: ReturnDeletedVCLockArgument = ReturnDeletedVCLockArgument(),
                      ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
-                     ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNEL[Throwable, Option[T]] = {
-    fetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified).unsafePerformIO
+                     ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNel[Throwable, Option[T]] = {
+    fetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified).unsafePerformIO()
   }
 
   // ifNoneMatch - bool - store
@@ -145,7 +145,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
                dw: DWArgument = DWArgument(),
                returnBody: ReturnBodyArgument = ReturnBodyArgument(),
                ifNoneMatch: Boolean = false,
-               ifNotModified: Boolean = false)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T], mutator: ScaliakMutation[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
+               ifNotModified: Boolean = false)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T], mutator: ScaliakMutation[T]): IO[ValidationNel[Throwable, Option[T]]] = {
     //TODO: need to not convert the object here
     // it causes two calls to converter.write.
     // Instead force domain objects to implement a simple
@@ -187,7 +187,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
              w: WArgument = WArgument(),
              pw: PWArgument = PWArgument(),
              dw: DWArgument = DWArgument(),
-             returnBody: ReturnBodyArgument = ReturnBodyArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNEL[Throwable, Option[T]]] = {
+             returnBody: ReturnBodyArgument = ReturnBodyArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNel[Throwable, Option[T]]] = {
     retrier[IO[com.basho.riak.client.raw.RiakResponse]] {
       runOnClient {
         _.store(converter.write(obj).asRiak(name, null), prepareStoreMeta(w, pw, dw, returnBody)).pure[IO]
@@ -314,7 +314,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
     }
   }
 
-  private def riakResponseToResult[T](r: RiakResponse)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNEL[Throwable, Option[T]] = {
+  private def riakResponseToResult[T](r: RiakResponse)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNel[Throwable, Option[T]] = {
     ((r.getRiakObjects map {
       converter.read(_)
     }).toList.toNel map { sibs =>
@@ -352,7 +352,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
 }
 
 trait ScaliakConverter[T] {
-  type ReadResult[T] = ValidationNEL[Throwable, T]
+  type ReadResult[T] = ValidationNel[Throwable, T]
 
   def read(o: ReadObject): ReadResult[T]
 
@@ -365,7 +365,7 @@ object ScaliakConverter extends ScaliakConverters {
 
 trait ScaliakConverters {
 
-  def newConverter[T](r: ReadObject => ValidationNEL[Throwable, T], w: T => WriteObject) = new ScaliakConverter[T] {
+  def newConverter[T](r: ReadObject => ValidationNel[Throwable, T], w: T => WriteObject) = new ScaliakConverter[T] {
     def read(o: ReadObject) = r(o)
 
     def write(o: T) = w(o)
@@ -382,7 +382,7 @@ trait ScaliakConverters {
 
 sealed trait ScaliakResolver[T] {
 
-  def apply(siblings: NonEmptyList[ValidationNEL[Throwable, T]]): ValidationNEL[Throwable, T]
+  def apply(siblings: NonEmptyList[ValidationNel[Throwable, T]]): ValidationNel[Throwable, T]
 
 }
 
@@ -396,8 +396,8 @@ object ScaliakResolver extends ScaliakResolvers {
 }
 
 trait ScaliakResolvers {
-  def newResolver[T](resolve: NonEmptyList[ValidationNEL[Throwable, T]] => ValidationNEL[Throwable, T]) = new ScaliakResolver[T] {
-    def apply(siblings: NonEmptyList[ValidationNEL[Throwable, T]]) = resolve(siblings)
+  def newResolver[T](resolve: NonEmptyList[ValidationNel[Throwable, T]] => ValidationNel[Throwable, T]) = new ScaliakResolver[T] {
+    def apply(siblings: NonEmptyList[ValidationNel[Throwable, T]]) = resolve(siblings)
   }
 }
 

@@ -18,6 +18,7 @@ package com.stackmob.scaliak.tests
 
 import org.specs2._
 import scalaz._
+import scalaz.NonEmptyList._
 import Scalaz._
 import com.stackmob.scaliak.{ScaliakLink, ReadObject}
 
@@ -105,7 +106,7 @@ class ScaliakObjectSpecs extends Specification { def is =
     "bucket", "text/plain", 
     null, "".getBytes, 
     metadata = Map(existingMetadataKey -> existingMetadataVal),
-    links = nel(ScaliakLink("bucket", "key1", "tag"), ScaliakLink("bucket", "key2", "tag")).some
+    links = nels(ScaliakLink("bucket", "key1", "tag"), ScaliakLink("bucket", "key2", "tag")).some
   )
 
 }
