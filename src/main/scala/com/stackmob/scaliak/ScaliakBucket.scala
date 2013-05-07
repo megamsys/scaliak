@@ -111,7 +111,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
                         ifModifiedSince: IfModifiedSinceArgument = IfModifiedSinceArgument(),
                         ifModified: IfModifiedVClockArgument = IfModifiedVClockArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNel[Throwable, Option[T]]] = {
     rawFetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModifiedSince, ifModified) map {
-      riakResponseToResult(_)
+      riakResponseToResult(_, returnDeletedVClock.allowTombstones)
     }
 
   }
@@ -156,7 +156,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
     val key = converter.write(obj)._key
     (for {
       resp <- rawFetch(key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock)
-      fetchRes <- riakResponseToResult(resp).pure[IO]
+      fetchRes <- riakResponseToResult(resp, returnDeletedVClock.allowTombstones).pure[IO]
     } yield {
       fetchRes flatMap {
         mbFetched => {
@@ -165,11 +165,13 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
           if (ifNoneMatch) storeMeta.etags(Array(objToStore.getVtag))
           if (ifNotModified) storeMeta.lastModified(objToStore.getLastModified)
 
-          riakResponseToResult {
+          riakResponseToResult(
             retrier[com.basho.riak.client.raw.RiakResponse] {
               runOnClient(_.store(objToStore, storeMeta))
-            }
-          }
+            },
+            returnDeletedVClock.allowTombstones
+          )
+
         }
       }
     }) except {
@@ -314,8 +316,10 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
     }
   }
 
-  private def riakResponseToResult[T](r: RiakResponse)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNel[Throwable, Option[T]] = {
-    ((r.getRiakObjects map {
+  private def riakResponseToResult[T](r: RiakResponse, allowTombstones: Boolean = false)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNel[Throwable, Option[T]] = {
+    ((r.getRiakObjects filter {
+      allowTombstones || !_.isDeleted
+    } map {
       converter.read(_)
     }).toList.toNel map { sibs =>
         resolver(sibs)
@@ -420,4 +424,3 @@ trait ScaliakMutators {
   def ClobberMutation[T] = newMutation((o: Option[T], n: T) => n)
 
 }
-
