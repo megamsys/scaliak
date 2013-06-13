@@ -23,6 +23,7 @@ import com.basho.riak.client.builders.RiakObjectBuilder
 import com.basho.riak.client.http.util.{Constants => RiakConstants}
 import com.basho.riak.client.{RiakLink, IRiakObject}
 import com.basho.riak.client.query.indexes.{RiakIndexes, IntIndex, BinIndex}
+import java.nio.charset.Charset
 
 /**
  * Represents data read from Riak
@@ -44,7 +45,7 @@ case class ReadObject(key: String,
   // TODO: probably should move, leaving for now since its used in a bunch of places
   def getBytes = bytes
 
-  def stringValue = new String(bytes)
+  def stringValue = new String(bytes, getCharset)
 
   def hasLinks = links.isDefined
 
@@ -81,6 +82,15 @@ case class ReadObject(key: String,
   def binIndex(name: String): Option[Set[String]] = binIndexes.get(BinIndex.named(name))
 
   def intIndex(name: String): Option[Set[Int]] = intIndexes.get(IntIndex.named(name))
+
+  private def getCharset: Charset =
+    ".*;\\s*charset=([^\\(\\)<>@,;:\\\\\"/\\[\\]\\?={}\\s\\t]+)\\s*.*$".r.findFirstMatchIn(contentType).flatMap {
+      reg => try {
+        Option(Charset.forName(reg.group(1)))
+      } catch {
+        case t: Exception => None
+      }
+    }.getOrElse(Charset.defaultCharset())
 
 }
 
