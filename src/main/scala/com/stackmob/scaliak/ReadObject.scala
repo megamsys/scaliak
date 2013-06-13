@@ -24,6 +24,7 @@ import com.basho.riak.client.http.util.{Constants => RiakConstants}
 import com.basho.riak.client.{RiakLink, IRiakObject}
 import com.basho.riak.client.query.indexes.{RiakIndexes, IntIndex, BinIndex}
 import java.nio.charset.Charset
+import scala.util.control.Exception._
 
 /**
  * Represents data read from Riak
@@ -83,14 +84,12 @@ case class ReadObject(key: String,
 
   def intIndex(name: String): Option[Set[Int]] = intIndexes.get(IntIndex.named(name))
 
-  private def getCharset: Charset =
-    ".*;\\s*charset=([^\\(\\)<>@,;:\\\\\"/\\[\\]\\?={}\\s\\t]+)\\s*.*$".r.findFirstMatchIn(contentType).flatMap {
-      reg => try {
-        Option(Charset.forName(reg.group(1)))
-      } catch {
-        case t: Exception => None
-      }
-    }.getOrElse(Charset.defaultCharset())
+  private lazy val charsetMatcher = """.*;\s*charset=([^\(\)<>@,;:\\"/\[\]\?={}\s\t]+);?\s*.*$""".r
+
+  private def getCharset: Charset = (contentType match {
+    case charsetMatcher(charset) => catching(classOf[Exception]).opt(Charset.forName(charset))
+    case _ => None
+  }).getOrElse(Charset.forName("ISO-8859-1"))
 
 }
 
