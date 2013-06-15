@@ -8,14 +8,14 @@ Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functio
 
 ### sbt
 ```scala
-"com.stackmob" %% "scaliak" % "0.7.1" 
+"com.stackmob" %% "scaliak" % "0.7.2" 
 ```
 ### maven
 ```xml
 <dependency>
   <groupId>com.stackmob</groupId>
   <artifactId>scaliak_${scala.version}</artifactId>
-  <version>0.7.1</version>
+  <version>0.7.2</version>
 </dependency>
 ```
 
