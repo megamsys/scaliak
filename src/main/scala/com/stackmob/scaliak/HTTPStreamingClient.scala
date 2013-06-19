@@ -20,9 +20,22 @@ import com.basho.riak.client.raw.http.HTTPClientAdapter
 import scalaz.IterV
 import scalaz.effect.IO
 import com.basho.riak.client.raw.query.MapReduceSpec
+import com.basho.riak.client.http.{RiakConfig, RiakClient}
 
-class HTTPStreamingClient(url: String) extends HTTPClientAdapter(url) with RawClientWithStreaming {
+class HTTPStreamingClient(url: String, timeout: Option[Int] = None) extends HTTPClientAdapter(HTTPStreamingClient.riakClient(url, timeout)) with RawClientWithStreaming {
   override def mapReduce[T, U, A](spec: MapReduceSpec, elementClass: Class[T], converter: T => U, iter: IterV[U, A]): IO[IterV[U, A]] = {
     throw new UnsupportedOperationException("Streaming mapreduce not supported in HTTP")
+  }
+}
+
+object HTTPStreamingClient {
+  def riakClient(url: String, timeoutOpt: Option[Int]): RiakClient = {
+    timeoutOpt map { timeout =>
+      val config = new RiakConfig(url)
+      config.setTimeout(timeout)
+      new RiakClient(config)
+    } getOrElse {
+      new RiakClient(url)
+    }
   }
 }

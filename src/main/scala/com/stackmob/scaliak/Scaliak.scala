@@ -20,8 +20,8 @@ import com.basho.riak.client.raw.http.HTTPClientAdapter
 
 object Scaliak {
 
-  def httpClient(url: String): ScaliakClient = {
-    val rawClient = new HTTPStreamingClient(url)
+  def httpClient(url: String, timeout: Option[Int] = None): ScaliakClient = {
+    val rawClient = new HTTPStreamingClient(url, timeout)
     new ScaliakClient(rawClient, None)
   }
 
