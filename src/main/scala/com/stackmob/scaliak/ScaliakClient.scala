@@ -18,8 +18,7 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-import effects._
-
+import scalaz.effect.IO
 import com.basho.riak.client.raw.RawClient
 import java.io.IOException
 import com.basho.riak.client.http.response.RiakIORuntimeException
@@ -50,14 +49,14 @@ class ScaliakClient(rawClient: RawClientWithStreaming, secHTTPClient: Option[Raw
              notFoundOk: NotFoundOkArgument = NotFoundOkArgument()): IO[Validation[Throwable, ScaliakBucket]] = {
     val metaArgs = List(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
 
-    val updateBucket = (metaArgs map { _.value.isDefined }).asMA.sum // update if more one or more arguments is passed in
+    val updateBucket = metaArgs.exists(_.value.isDefined) // update if more one or more arguments is passed in
 
     val fetchAction = bucketPropertyClient.fetchBucket(name).pure[IO]
 
     val fullAction = if (updateBucket) {
       bucketPropertyClient.updateBucket(name,
         createUpdateBucketProps(allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)
-      ).pure[IO] >>=| fetchAction
+      ).pure[IO].flatMap(_ => fetchAction)
     } else {
       fetchAction
     }
@@ -70,10 +69,7 @@ class ScaliakClient(rawClient: RawClientWithStreaming, secHTTPClient: Option[Raw
         case t: RiakIORuntimeException => t.getCause.some
         case _                         => none
       }
-    } map { _ match {
-      case Left(e) => e.fail
-      case Right(s) => s.success
-    }}
+    } map { _.validation }
   }
 
   // this method causes side effects and may throw

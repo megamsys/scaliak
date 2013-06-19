@@ -19,6 +19,7 @@ package com.stackmob.scaliak.tests
 import org.specs2._
 import mock._
 import scalaz._
+import scalaz.NonEmptyList._
 import Scalaz._
 import com.basho.riak.client.cap.VClock
 import com.stackmob.scaliak.{ScaliakLink, ReadObject}
@@ -116,7 +117,7 @@ class ApplicativeMappingSpecs extends Specification with Mockito { def is =
     }
     
     def testKeyExistsMissingPred = {
-      (riakMetadata(mKey, _ => false)(obj) map { DomainObject(_) }).either must beLeft.like {
+      (riakMetadata(mKey, _ => false)(obj) map { DomainObject(_) }).toEither must beLeft.like {
         case errors => errors.list must haveSize(1) and have((t: Throwable) => {
           val e = t.asInstanceOf[MetadataMappingError]
           (e.value, e.key) must_== (mVal, mKey)
@@ -125,7 +126,7 @@ class ApplicativeMappingSpecs extends Specification with Mockito { def is =
     }
     
     def testKeyMissing = {
-      (riakMetadata("missing", _ => true)(obj) map { DomainObject(_) }).either must beLeft.like {
+      (riakMetadata("missing", _ => true)(obj) map { DomainObject(_) }).toEither must beLeft.like {
         case errors => errors.list must haveSize(1) and have((t: Throwable) => {
           val e = t.asInstanceOf[MissingMetadataMappingError]
           e.key must beEqualTo("missing")
@@ -147,7 +148,7 @@ class ApplicativeMappingSpecs extends Specification with Mockito { def is =
     }
     
     def testFalsePredicate = {
-      (bytesValue(_ => false)(testObject) map { DomainObject(_) }).either must beLeft.like {
+      (bytesValue(_ => false)(testObject) map { DomainObject(_) }).toEither must beLeft.like {
         case errors => errors.list must haveSize(1) and have((t: Throwable) => new String(t.asInstanceOf[MappingError[Array[Byte]]].value) == testValue)
       }
     }
@@ -165,7 +166,7 @@ class ApplicativeMappingSpecs extends Specification with Mockito { def is =
     }
     
     def testFalsePredicate = {
-      (stringValue(_ => false)(testObject) map { DomainObject(_) }).either must beLeft.like {
+      (stringValue(_ => false)(testObject) map { DomainObject(_) }).toEither must beLeft.like {
         case errors => errors.list must haveSize(1) and have((_: Throwable).asInstanceOf[MappingError[String]].value == testValue)
       }
     }
@@ -184,7 +185,7 @@ class ApplicativeMappingSpecs extends Specification with Mockito { def is =
     }
     
     def testFalsePredicate = {
-      (riakKey(_ => false)(testObject) map { DomainObject(_) }).either must beLeft.like {
+      (riakKey(_ => false)(testObject) map { DomainObject(_) }).toEither must beLeft.like {
         case errors =>
           errors.list must haveSize(1) and have((_: Throwable).asInstanceOf[MappingError[String]].value == testKey)
       }
@@ -214,7 +215,7 @@ class ApplicativeMappingSpecs extends Specification with Mockito { def is =
     }
     
     def testFalsePredicateAllowOptional = {
-      (links(_ => false)(testObject) map { DomainObject1(_) }).either must beLeft.like {
+      (links(_ => false)(testObject) map { DomainObject1(_) }).toEither must beLeft.like {
         case errors => 
           errors.list must haveSize(1) and have ((t: Throwable) =>
             (t.asInstanceOf[MappingError[Option[NonEmptyList[ScaliakLink]]]].value map {
@@ -225,7 +226,7 @@ class ApplicativeMappingSpecs extends Specification with Mockito { def is =
     }
 
     def testFalsePredicateNoOptional = {
-      (nonEmptyLinks(_ => false)(testObject) map { DomainObject2(_) }).either must beLeft.like {
+      (nonEmptyLinks(_ => false)(testObject) map { DomainObject2(_) }).toEither must beLeft.like {
         case errors =>
           errors.list must haveSize(1) and have (
             (_: Throwable).asInstanceOf[MappingError[NonEmptyList[ScaliakLink]]].value.list == testLinks.list
@@ -237,7 +238,7 @@ class ApplicativeMappingSpecs extends Specification with Mockito { def is =
 
   val testKey = "testKey"
   val testValue = "some value"
-  val testLinks = nel(ScaliakLink("bucket1", "key", "tag"))
+  val testLinks = nels(ScaliakLink("bucket1", "key", "tag"))
   val testObject = ReadObject(
     key = testKey,
     bucket = "testBucket",

@@ -99,6 +99,7 @@ case class BasicQuorumArgument(value: Option[Boolean] = none)
 
 case class ReturnDeletedVCLockArgument(value: Option[Boolean] = none) extends ScaliakArgument[Boolean] with FetchMetaBuilder[Boolean] {
   def fetchMetaFunction(meta: FetchMeta.Builder) = meta.returnDeletedVClock
+  def allowTombstones = value.getOrElse(false)
 }
 
 case class IfModifiedSinceArgument(value: Option[Date] = none) extends ScaliakArgument[Date] with FetchMetaBuilder[Date] {

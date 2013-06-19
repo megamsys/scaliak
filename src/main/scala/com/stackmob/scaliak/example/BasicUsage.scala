@@ -19,7 +19,7 @@ package example
 
 import scalaz._
 import Scalaz._
-import effects._
+import scalaz.effect.IO
 import org.slf4j.LoggerFactory
 
 object BasicUsage extends App {
@@ -29,7 +29,7 @@ object BasicUsage extends App {
   val client = Scaliak.httpClient("http://localhost:8091/riak")
   client.generateAndSetClientId() // always calls this or setClientId(Array[Byte]) after creating a client
 
-  val bucket = client.bucket("scaliak-example").unsafePerformIO ||| { throw _ }
+  val bucket = client.bucket("scaliak-example").unsafePerformIO() valueOr { throw _ }
 
   // Store an object with no conversion
   // this is not the suggested way to use the client
@@ -39,16 +39,16 @@ object BasicUsage extends App {
   // the suggested interface an exception is made. In this case we are storing an object
   // that only exists in memory so we have no vclock.
   val obj = new ReadObject(key, bucket.name, "text/plain", null, "test value".getBytes)
-  bucket.store(obj).unsafePerformIO  
+  bucket.store(obj).unsafePerformIO()
 
   // fetch an object with no conversion
-  bucket.fetch(key).unsafePerformIO match {
+  bucket.fetch(key).unsafePerformIO() match {
     case Success(mbFetched) => logger.debug(mbFetched some { _.stringValue } none { "did not find key" })
     case Failure(es) => throw es.head
   }
 
   // or you can take advantage of the IO Monad
-  def printFetchRes(v: ValidationNEL[Throwable, Option[ReadObject]]): IO[Unit] = v match {
+  def printFetchRes(v: ValidationNel[Throwable, Option[ReadObject]]): IO[Unit] = v match {
     case Success(mbFetched) => {
       logger.debug(
         mbFetched some { "fetched: " + _.stringValue } none { "key does not exist" }
@@ -65,6 +65,6 @@ object BasicUsage extends App {
     _ <- logger.debug("deleting").pure[IO]
     _ <- bucket.deleteByKey(key)
   } yield (mbFetchedOrErrors.toOption | none)
-  originalResult.unsafePerformIO
+  originalResult.unsafePerformIO()
  
 }

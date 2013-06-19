@@ -19,7 +19,7 @@ package com.stackmob.scaliak.linkwalk
 import scalaz._
 import Scalaz._
 import com.basho.riak.client.query.LinkWalkStep.Accumulate
-import com.stackmob.scaliak.{ScaliakConverter, ScaliakResolver, ReadObject, ScaliakBucket}
+import com.stackmob.scaliak.{ScaliakConverter, ReadObject, ScaliakBucket}
 
 sealed trait LinkWalkStep extends LinkWalkStepOperators {
   def bucket: String
@@ -61,7 +61,7 @@ trait LinkWalkStepOperators {
 
   def *(i: Int) = times(i)
   def times(i: Int): LinkWalkSteps =
-    List.fill(i)(existingSteps).foldl1(_ |+| _) | existingSteps
+    List.fill(i-1)(existingSteps).foldLeft(existingSteps)(_ |+| _)
 
 }
 
