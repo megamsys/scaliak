@@ -23,13 +23,13 @@ scalacOptions := Seq(
 )
 
 libraryDependencies ++= {
-  val scalazVersion = "7.0.0"
+  val scalazVersion = "7.0.3"
   Seq(
     "org.scalaz" %% "scalaz-core" % scalazVersion,
     "org.scalaz" %% "scalaz-iteratee" % scalazVersion,
     "org.scalaz" %% "scalaz-effect" % scalazVersion,
     "org.scalaz" %% "scalaz-iterv" % scalazVersion,
-    "net.liftweb" %% "lift-json-scalaz7" % "2.5",
+    "net.liftweb" %% "lift-json-scalaz7" % "2.5.1",
     "com.basho.riak" % "riak-client" % "1.1.0",
     "commons-pool" % "commons-pool" % "1.6",
     "org.slf4j" % "slf4j-api" % "1.7.5",
