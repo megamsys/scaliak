@@ -18,39 +18,41 @@ package com.stackmob.scaliak.linkwalk
 
 import scalaz._
 import Scalaz._
-import com.basho.riak.client.query.LinkWalkStep.Accumulate
-import com.stackmob.scaliak.{ScaliakConverter, ReadObject, ScaliakBucket}
+import com.stackmob.scaliak.{ ScaliakConverter, ReadObject, ScaliakBucket }
 
-sealed trait LinkWalkStep extends LinkWalkStepOperators {
+/**
+ * Needs to be rewritten using mapreduce link (2.0)
+ * sealed trait LinkWalkStep extends LinkWalkStepOperators {
+ 
   def bucket: String
   def tag: String
-  def accumulate: Accumulate
+  def keep: Boolean
 
   val existingSteps = this.wrapNel
 
-  override def toString = List(bucket,tag,accumulate).mkString("LinkWalkStep(", ",", ")")
+  override def toString = List(bucket, tag, keep).mkString("LinkWalkStep(", ",", ")")
 
 }
+* 
+*/
 
 object LinkWalkStep {
 
-  def apply(bucket: String, tag: String): LinkWalkStep = apply(bucket, tag, Accumulate.DEFAULT)
+ /* def apply(bucket: String, tag: String): LinkWalkStep = apply(bucket, tag, false)
 
-  def apply(bucket: String, tag: String, shouldAccumulate: Boolean): LinkWalkStep =
-    if (shouldAccumulate) apply(bucket, tag, Accumulate.YES)
-    else apply(bucket, tag, Accumulate.NO)
-
-  def apply(b: String, t: String, a: Accumulate): LinkWalkStep = new LinkWalkStep {
+  def apply(b: String, t: String, k: Boolean):LinkWalkStep =  new LinkWalkStep  {
     val bucket = b
     val tag = t
-    val accumulate = a
+    val keep = k
   }
 
   implicit def LinkWalkStepEqual: Equal[LinkWalkStep] =
-    Equal.equal((s1, s2) => s1.bucket === s2.bucket && s1.tag === s2.tag && s1.accumulate == s2.accumulate)
+    Equal.equal((s1, s2) => s1.bucket === s2.bucket && s1.tag === s2.tag && s1.keep == s2.keep)
+    * 
+    */
 }
 
-trait LinkWalkStepOperators {
+/**trait LinkWalkStepOperators {
 
   def existingSteps: LinkWalkSteps
 
@@ -61,7 +63,7 @@ trait LinkWalkStepOperators {
 
   def *(i: Int) = times(i)
   def times(i: Int): LinkWalkSteps =
-    List.fill(i-1)(existingSteps).foldLeft(existingSteps)(_ |+| _)
+    List.fill(i - 1)(existingSteps).foldLeft(existingSteps)(_ |+| _)
 
 }
 
@@ -70,7 +72,7 @@ class LinkWalkStepTuple3(value: (String, String, Boolean)) {
 }
 
 class LinkWalkStepTuple2(value: (String, String)) {
-  def toLinkWalkStep = LinkWalkStep(value._1, value._2)
+  def toLinkWalkStep = LinkWalkStep(value._1, value._2, false)
 }
 
 class LinkWalkStepsW(values: LinkWalkSteps) extends LinkWalkStepOperators {
@@ -82,6 +84,8 @@ class LinkWalkStartTuple(values: (ScaliakBucket, ReadObject)) {
   private val obj = values._2
 
   def linkWalk[T](steps: LinkWalkSteps)(implicit converter: ScaliakConverter[T]) = {
-    bucket.linkWalk(obj, steps)
+    //TO-DObucket.linkWalk(obj, steps)
+    Nil
   }
 }
+*/

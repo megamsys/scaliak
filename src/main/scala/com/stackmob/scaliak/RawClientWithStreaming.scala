@@ -16,11 +16,32 @@
 
 package com.stackmob.scaliak
 
-import com.basho.riak.client.raw.RawClient
-import scalaz.IterV
-import com.basho.riak.client.raw.query.MapReduceSpec
 import scalaz.effect.IO
 
-trait RawClientWithStreaming extends RawClient {
-  def mapReduce[T, U, A](spec: MapReduceSpec, elementClass: Class[T], converter: T => U, iter: IterV[U, A]): IO[IterV[U, A]]
+import com.basho.riak.client.core.operations._
+import com.basho.riak.client.core.query.RiakObject
+import com.basho.riak.client.core.query.BucketProperties
+import com.basho.riak.client.core.query.Namespace
+
+
+trait RawClientWithStreaming {
+  //  def mapReduce[T, U, A](spec: MapReduceSpec, elementClass: Class[T], converter: T => U, iter: IterV[U, A]): IO[IterV[U, A]]
+  def ping() 
+  
+  def listBuckets(bucketType: String = Namespace.DEFAULT_BUCKET_TYPE): List[String]
+  
+  def fetchBucket(f: FetchBucketPropsOperation): BucketProperties
+  
+  def storeBucket(p: StoreBucketPropsOperation)
+
+  def fetch(f: FetchOperation): FetchOperation.Response
+  
+  def store(s: StoreOperation): StoreOperation.Response
+
+  def fetchIndex(s: SecondaryIndexQueryOperation): List[String]
+
+  def delete(d: DeleteOperation)
+
+  def shutdown()
+
 }

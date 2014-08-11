@@ -16,20 +16,14 @@
 
 package com.stackmob.scaliak
 
-import com.basho.riak.client.raw.http.HTTPClientAdapter
+import scala.collection.immutable.List
+import com.basho.riak.client.core.RiakNode
 
-object Scaliak {
-
-  def httpClient(url: String, timeout: Option[Int] = None): ScaliakClient = {
-    val rawClient = new HTTPStreamingClient(url, timeout)
-    new ScaliakClient(rawClient, None)
-  }
-
-  // PB Client is a lot faster, but we'll still need the HTTP client for getting bucket properties etc.
-  def pbClient(host: String, port: Int, httpPort: Int): ScaliakClient = {
-    val rawClient = new PBStreamingClient(host, port)
-    val secHTTPClient = new HTTPClientAdapter("http://" + host + ":" + httpPort + "/riak")
-    new ScaliakClient(rawClient, Some(secHTTPClient))
+object Scaliak { 
+  
+  def client(hosts: List[String], port: Int = RiakNode.Builder.DEFAULT_REMOTE_PORT): ScaliakClient = {
+    val rawClient = new PBStreamingClient(hosts, port)
+    new ScaliakClient(rawClient)
   }
 
 }

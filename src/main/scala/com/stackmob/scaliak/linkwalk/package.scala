@@ -16,16 +16,16 @@
 
 package com.stackmob.scaliak
 
-import com.basho.riak.client.query.{LinkWalkStep => JLinkWalkStep}
+//import com.basho.riak.client.api.commands.mapreduce.{LinkPhase => JLinkWalkStep}
 import scalaz.NonEmptyList
 import java.util.LinkedList
 
 package object linkwalk {
   
-  type LinkWalkSteps = NonEmptyList[LinkWalkStep]
+  /*type LinkWalkSteps = NonEmptyList[LinkWalkStep]
   
   implicit def linkWalkStepToJLinkWalkStep(lws: LinkWalkStep): JLinkWalkStep = {
-    new JLinkWalkStep(lws.bucket, lws.tag, lws.accumulate)
+    new JLinkWalkStep(lws.bucket, lws.tag, lws.keep)
   }
   
   implicit def linkWalkStepToSteps(lws: LinkWalkStep): LinkWalkSteps = NonEmptyList(lws)
@@ -47,5 +47,5 @@ package object linkwalk {
     steps.list foreach { list.add(_) }
     list
   }
-  
+  */
 }

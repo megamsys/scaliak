@@ -18,7 +18,7 @@ package com.stackmob.scaliak.mapreduce
 
 import scalaz._
 import Scalaz._
-import com.basho.riak.pbc.mapreduce.JavascriptFunction
+import com.basho.riak.client.core.query.functions.Function
 
 case class BinaryIndex(idx: String, idv: String, bucket: String)
 
@@ -51,7 +51,7 @@ case class MapMethod() extends MapReduceMethod
 sealed trait MapOrReducePhase extends MapReducePhaseOperators {
   def method: MapReduceMethod
 
-  def fn: JavascriptFunction
+  def fn: Function
 
   def keep: Boolean
 
@@ -63,7 +63,7 @@ sealed trait MapOrReducePhase extends MapReducePhaseOperators {
 }
 
 object MapOrReducePhase {
-  def apply(m: MapReduceMethod, f: JavascriptFunction, k: Boolean = false, a: Option[java.lang.Object] = None): MapOrReducePhase = new MapOrReducePhase {
+  def apply(m: MapReduceMethod, f: Function, k: Boolean = false, a: Option[java.lang.Object] = None): MapOrReducePhase = new MapOrReducePhase {
     val method = m
     val fn = f
     val keep = k
@@ -72,7 +72,7 @@ object MapOrReducePhase {
 }
 
 object MapPhase {
-  def apply(f: JavascriptFunction, k: Boolean = false, a: Option[java.lang.Object] = None): MapOrReducePhase = new MapOrReducePhase {
+  def apply(f: Function, k: Boolean = false, a: Option[java.lang.Object] = None): MapOrReducePhase = new MapOrReducePhase {
     val method = MapMethod()
     val fn = f
     val keep = k
@@ -81,7 +81,7 @@ object MapPhase {
 }
 
 object ReducePhase {
-  def apply(f: JavascriptFunction, k: Boolean = false, a: Option[java.lang.Object] = None): MapOrReducePhase = new MapOrReducePhase {
+  def apply(f: Function, k: Boolean = false, a: Option[java.lang.Object] = None): MapOrReducePhase = new MapOrReducePhase {
     val method = ReduceMethod()
     val fn = f
     val keep = k
@@ -108,7 +108,7 @@ sealed trait MapReducePhaseOperators {
   }
 }
 
-class MapOrReducePhaseTuple4(value: (MapReduceMethod, JavascriptFunction, Boolean, Option[java.lang.Object])) {
+class MapOrReducePhaseTuple4(value: (MapReduceMethod, Function, Boolean, Option[java.lang.Object])) {
   def toMapOrReducePhase = MapOrReducePhase(value._1, value._2, value._3, value._4)
 }
 

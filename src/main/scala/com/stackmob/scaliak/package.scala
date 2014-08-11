@@ -17,7 +17,7 @@
 package com.stackmob
 
 import java.util.Date
-import com.basho.riak.client.cap.VClock
+import com.basho.riak.client.api.cap.VClock
 
 package object scaliak {
 
@@ -29,12 +29,11 @@ package object scaliak {
   implicit def boolToNotFoundOkArg(b: Boolean): NotFoundOkArgument = NotFoundOkArgument(Option(b))
   implicit def boolToBasicQuorumArg(b: Boolean): BasicQuorumArgument = BasicQuorumArgument(Option(b))
   implicit def boolToReturnDeletedVClockArg(b: Boolean): ReturnDeletedVCLockArgument = ReturnDeletedVCLockArgument(Option(b))
-  implicit def dateToIfModifiedSinceArg(d: Date): IfModifiedSinceArgument = IfModifiedSinceArgument(Option(d))
-  implicit def vclockToIfModifiedVClockArg(v: VClock): IfModifiedVClockArgument = IfModifiedVClockArgument(Option(v))
+  implicit def vclockToIfModifiedVClockArg(v: Array[Byte]): IfModifiedVClockArgument = IfModifiedVClockArgument(Option(v))
   implicit def intToWArg(i: Int): WArgument = WArgument(Option(i))
   implicit def intToRWArg(i: Int): RWArgument = RWArgument(Option(i))
   implicit def intToDWArg(i: Int): DWArgument = DWArgument(Option(i))
   implicit def intToPWArg(i: Int): PWArgument = PWArgument(Option(i))
   implicit def boolToReturnBodyArg(b: Boolean): ReturnBodyArgument = ReturnBodyArgument(Option(b))
-  
+
 }
