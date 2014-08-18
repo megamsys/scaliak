@@ -55,7 +55,7 @@ class PBStreamingClient(hosts: List[String], port: Int) extends RawClientWithStr
   }
 
   def ping(): Try[Void] = cluster flatMap (_.execute(new PingOperation()))
-
+  
   def listBuckets(bucketType: String = Namespace.DEFAULT_BUCKET_TYPE): Try[List[String]] = {
     cluster flatMap ({ x: RiakCluster =>
       {
@@ -78,6 +78,8 @@ class PBStreamingClient(hosts: List[String], port: Int) extends RawClientWithStr
       case Failure(t) => Failure(t)
     }
   }
+  
+  def listKeys(liop: ListKeysOperation): Try[ListKeysOperation.Response] = cluster flatMap (_.execute(liop))
 
   def fetch(foop: FetchOperation): Try[FetchOperation.Response] = cluster flatMap (_.execute(foop))
 

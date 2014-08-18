@@ -9,7 +9,7 @@ import sbt._
 
 name := "scaliak"
 
-organization := "org.megam"
+organization := "com.stackmob"
 
 scalaVersion := "2.11.2"
 
@@ -25,7 +25,7 @@ scalacOptions := Seq(
   "-Yinline",
   "-Yclosure-elim",
   "-Ybackend:GenBCode",
-  "closurify:delegating", 
+  "closurify:delegating",
   "-language:implicitConversions",
   "-language:higherKinds",
   "-language:reflectiveCalls",
@@ -62,7 +62,7 @@ scalacOptions := Seq(
       "org.apache.commons" % "commons-pool2" % "2.2",
       "org.slf4j" % "slf4j-api" % "1.7.7",
       //"ch.qos.logback" % "logback-classic" % "1.1.2",
-      "org.specs2" % "specs2_2.11" % "2.4" % "test"
+      "org.specs2" % "specs2_2.11" % "2.4.1" % "test"
       )
     }
 

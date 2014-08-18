@@ -31,7 +31,9 @@ import scala.collection.JavaConverters._
 trait RawClientWithStreaming {
 
   def ping(): Try[Void]
-
+  
+  def listKeys(liop: ListKeysOperation): Try[ListKeysOperation.Response]
+  
   def listBuckets(bucketType: String = Namespace.DEFAULT_BUCKET_TYPE): Try[List[String]]
 
   def fetchBucket(f: FetchBucketPropsOperation): Try[BucketProperties]
