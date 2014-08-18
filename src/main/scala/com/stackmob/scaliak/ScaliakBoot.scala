@@ -24,20 +24,27 @@ import com.basho.riak.client.core.operations.StoreBucketPropsOperation
 import com.basho.riak.client.core.operations.FetchBucketPropsOperation
 import com.basho.riak.client.core.query.BucketProperties
 import com.basho.riak.client.core.query.Namespace
-
+import scala.util.Try
 /**
  * @author ram
  *
  */
 trait ScaliakBoot {
 
-  def pb: RawClientWithStreaming
-  
-  def rawOrPool : scala.util.Either[RawClientWithStreaming, ScaliakClientPool]
+  def rawOrPool: scala.util.Either[RawClientWithStreaming, ScaliakClientPool]
 
-  def listBuckets: IO[Set[String]] = {
-    pb.listBuckets().pure[IO] map { _.toSet }
+  def runOnClient[A](f: RawClientWithStreaming => A): A = {
+    rawOrPool match {
+      case Left(client) => f(client)
+      case Right(pool)  => pool.withClient[A](f)
+    }
   }
+
+  def listBuckets: IO[Validation[Throwable, Set[String]]] =
+    //TO-DO : todo.{map _}.get is actually Try.get. We need to handle exception.
+    runOnClient(_.listBuckets()).pure[IO].map { todo => { todo.map { z: List[String] => z.toSet }.get }.success[Throwable] }.except {
+      _.failure[Set[String]].pure[IO]
+    }
 
   def bucket(name: String,
     allowSiblings: AllowSiblingsArgument = AllowSiblingsArgument(),
@@ -59,33 +66,29 @@ trait ScaliakBoot {
 
     val fetchPropsBuilder = new FetchBucketPropsOperation.Builder(ns)
 
-    val fetchAction = pb.fetchBucket(fetchPropsBuilder.build()).pure[IO]
+    val fetchAction = runOnClient(_.fetchBucket(fetchPropsBuilder.build()))
 
     val storeAction = (if (isUpdateBucket) {
-      pb.storeBucket(createUpdateBucketProps(name, allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk)).pure[IO].flatMap(_ => fetchAction)
-    } else none).pure[IO] 
+      runOnClient(_.storeBucket(createUpdateBucketProps(name, allowSiblings, lastWriteWins, nVal, r, w, rw, dw, pr, pw, basicQuorum, notFoundOk))).flatMap(_ => fetchAction)
+    } else Try(null))
 
     (for {
       sbp <- storeAction
       fbp <- fetchAction
-    } yield buildBucket(fbp, name)) catchSomeLeft { (t: Throwable) =>
-      t match {
-        case t: IOException   => t.some
-        case t: RiakException => t.getCause.some
-        case _                => none
-      }
-    } map { _.validation }
-  }
+      //TO-DO : todo.get is actually Try.get.We need to handle exception.
+    } yield buildBucket(fbp, name)).pure[IO].map { todo => todo.get.success[Throwable] }.except {
+      _.failure[ScaliakBucket].pure[IO]
+    }
 
-  def shutdown() {
-    pb.shutdown()
   }
 
   private def buildBucket(b: BucketProperties, name: String) = {
-    val precommits = Option(b.getPrecommitHooks).cata(_.toArray.toSeq, Nil) map { _.asInstanceOf[com.basho.riak.client.core.query.functions.Function
-] }
-    val postcommits = Option(b.getPostcommitHooks).cata(_.toArray.toSeq, Nil) map { _.asInstanceOf[com.basho.riak.client.core.query.functions.Function
-] }
+    val precommits = Option(b.getPrecommitHooks).cata(_.toArray.toSeq, Nil) map {
+      _.asInstanceOf[com.basho.riak.client.core.query.functions.Function]
+    }
+    val postcommits = Option(b.getPostcommitHooks).cata(_.toArray.toSeq, Nil) map {
+      _.asInstanceOf[com.basho.riak.client.core.query.functions.Function]
+    }
     new ScaliakBucket(
       rawClientOrClientPool = rawOrPool,
       name = name,

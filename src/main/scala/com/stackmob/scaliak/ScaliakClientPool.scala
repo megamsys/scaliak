@@ -25,7 +25,7 @@ import scala.collection.immutable.List
 import java.io.IOException
 import scala.collection.JavaConversions._
 
-abstract class ScaliakClientPool {
+abstract class ScaliakClientPool  extends ScaliakBoot {
   def withClient[T](body: RawClientWithStreaming => T): T
 }
 
@@ -33,38 +33,38 @@ class ScaliakPbClientFactory(hosts: List[String], port: Int) extends PooledObjec
 
   override def makeObject(): PooledObject[Object] = new DefaultPooledObject(new PBStreamingClient(hosts, port))
 
-  override def destroyObject(sc: org.apache.commons.pool2.PooledObject[Object]) {
-    sc.getObject.asInstanceOf[RawClientWithStreaming].shutdown()
-  }
+  /*is invoked on every instance that has been passivated before it is borrowed from the pool.*/
+  override def activateObject(sc: org.apache.commons.pool2.PooledObject[Object]) {}
 
-  override def passivateObject(sc: org.apache.commons.pool2.PooledObject[Object]) {}
-
+  /*may be invoked on activated instances to make sure they can be borrowed from the pool.*/
   override def validateObject(sc: org.apache.commons.pool2.PooledObject[Object]): Boolean = {
     try {
-      /**
-       * TO-DO
-       *  Do you want this ?
-       *    sc.asInstanceOf[RawClientWithStreaming].ping
-       */
+      // sc.asInstanceOf[RawClientWithStreaming].ping      
       true
     } catch {
       case e: Throwable => false
     }
   }
 
-  override def activateObject(sc: org.apache.commons.pool2.PooledObject[Object]) {}
+  /*is invoked on every instance when it is returned to the pool.*/
+  override def passivateObject(sc: org.apache.commons.pool2.PooledObject[Object]) {}
+
+  /*is invoked on every instance when it is being "dropped" from the pool (whether due to the response from validateObject(org.apache.commons.pool2.PooledObject<T>), 
+    or for reasons specific to the pool implementation.) There is no guarantee that the instance being destroyed will be considered active, passive or in a generally 
+    consistent state.*/
+  override def destroyObject(sc: org.apache.commons.pool2.PooledObject[Object]) {
+    sc.getObject.asInstanceOf[RawClientWithStreaming].shutdown()
+  }
 
 }
 
-class ScaliakPbClientPool(hosts: List[String], port: Int, httpPort: Int) extends ScaliakClientPool with ScaliakBoot {
-  
-  val scaliakPbFactory = new ScaliakPbClientFactory(hosts, port);
+class ScaliakPbClientPool(hosts: List[String], port: Int) extends ScaliakClientPool  {
+
+  val scaliakPbFactory = new ScaliakPbClientFactory(hosts, port)
 
   val pool = new GenericObjectPool(scaliakPbFactory)
 
-  def pb = scaliakPbFactory.makeObject.getObject.asInstanceOf[RawClientWithStreaming]
-  
-  def rawOrPool = Right(this)
+ def rawOrPool = Right(this)
 
   def withClient[T](body: RawClientWithStreaming => T): T = {
     val client = pool.borrowObject.asInstanceOf[RawClientWithStreaming]
@@ -76,6 +76,6 @@ class ScaliakPbClientPool(hosts: List[String], port: Int, httpPort: Int) extends
   def close() {
     pool.close()
   }
-  
+
   override def toString = hosts + ":" + String.valueOf(port)
 }

@@ -32,6 +32,7 @@ import com.basho.riak.client.core.util.BinaryValue
 import com.basho.riak.client.core.query.RiakObject
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 import com.basho.riak.client.api.cap.{ UnresolvedConflictException, Quorum }
 import com.basho.riak.client.core.query.indexes.{ StringBinIndex, LongIntIndex }
 import com.basho.riak.client.core.operations.SecondaryIndexQueryOperation
@@ -164,14 +165,15 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
         fetchRes flatMap {
           mbFetched =>
             {
-              val vclk = (resp.getObjectList.asScala.headOption getOrElse new RiakObject()).getVClock()
-                           
-              val objToStore = converter.write(mutator(mbFetched, obj)).asRiak(name, vclk)
-             
+              //TODO: we don't handle failure here.
+              val vclk = resp map { todo => (todo.getObjectList.asScala.headOption getOrElse new RiakObject()).getVClock() }
+
+              val objToStore = converter.write(mutator(mbFetched, obj)).asRiak(name, vclk.get)
+
               val storeMeta = prepareStoreOps(obk._key, objToStore, w, pw, dw, returnBody, ifNoneMatch, ifNotModified)
 
               riakStoreResponseToResult(obk._key,
-                retrier[StoreOperation.Response] {
+                retrier[Try[StoreOperation.Response]] {
                   runOnClient(_.store(storeMeta))
                 },
                 returnDeletedVClock.allowTombstones)
@@ -192,7 +194,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
     dw: DWArgument = DWArgument(),
     returnBody: ReturnBodyArgument = ReturnBodyArgument())(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): IO[ValidationNel[Throwable, Option[T]]] = {
     val wobj = converter.write(obj)
-    retrier[IO[StoreOperation.Response]] {
+    retrier[IO[Try[StoreOperation.Response]]] {
       val objToStore = wobj.asRiak(name, null)
       runOnClient {
         _.store(prepareStoreOps(wobj._key, objToStore, w, pw, dw, returnBody)).pure[IO]
@@ -219,24 +221,21 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
     val deleteMetaBuilder = new DeleteOperation.Builder(new Location(ns, key));
     val emptyFetchMeta = new FetchOperation.Builder(new Location(ns, key)).build()
 
-    val mbFetchHead = {
-      if (fetchBefore) {
-        runOnClient {
-          _.fetch(emptyFetchMeta).pure[Option].pure[IO]
-        }
-      } else none.pure[IO]
-    }
+    val mbFetchHead = (fetchBefore.some map { x =>
+      runOnClient {
+        _.fetch(emptyFetchMeta).pure[IO]
+      }
+    }).get 
 
-    val result = (for {
+    (for {
       mbHeadResponse <- mbFetchHead
-      deleteMeta <- retrier[IO[DeleteOperation]](prepareDeleteMeta(mbHeadResponse, deleteMetaBuilder).pure[IO])
+      deleteMeta <- retrier[IO[DeleteOperation]](prepareDeleteMeta(mbHeadResponse.toOption, deleteMetaBuilder).pure[IO])
       _ <- {
         runOnClient {
           _.delete(deleteMeta).pure[IO]
         }
       }
-    } yield (println("[delete] success for key" + key)).success[Throwable])
-    result except {
+    } yield (println("[delete] success for key" + key)).success[Throwable]) except {
       t => t.failure[Unit].pure[IO]
     }
   }
@@ -276,9 +275,10 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
 
   private def fetchValueIndex(query: SecondaryIndexQueryOperation): IO[Validation[Throwable, List[String]]] = {
     runOnClient {
-      _.fetchIndex(query).pure[IO].map(_.success[Throwable]).except {
+      _.fetchIndex(query).pure[IO].map { todo => todo.get.success[Throwable] }.except {
         _.failure[List[String]].pure[IO]
       }
+
     }
   }
 
@@ -292,35 +292,40 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
     val fetchMetaBuilder = new FetchOperation.Builder(new Location(ns, key))
     List(r, pr, notFoundOk, basicQuorum, returnDeletedVClock, ifModified) foreach { _ addToMeta fetchMetaBuilder }
 
-    retrier[IO[FetchOperation.Response]] {
+    retrier[IO[Try[FetchOperation.Response]]] {
       runOnClient(_.fetch(fetchMetaBuilder.build).pure[IO])
     }
   }
 
-  private def riakFetchResponseToResult[T](key: String, r: FetchOperation.Response, allowTombstones: Boolean = false)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNel[Throwable, Option[T]] = {
-    ((r.getObjectList.asScala filter {
-      allowTombstones || !_.isDeleted
-    } map { x =>
-      {
-        val rro: ReadObject = new RichRiakObject(key, name, x)
-        converter.read(rro)
-      }
-    }).toList.toNel map { sibs =>
-      resolver(sibs)
-    }).sequence[ScaliakConverter[T]#ReadResult, T]
+  private def riakFetchResponseToResult[T](key: String, r: Try[FetchOperation.Response], allowTombstones: Boolean = false)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNel[Throwable, Option[T]] = {
+    r.map { todo =>
+      ((todo.getObjectList.asScala filter {
+        allowTombstones || !_.isDeleted
+      } map { x =>
+        {
+          val rro: ReadObject = new RichRiakObject(key, name, x)
+          converter.read(rro)
+        }
+      }).toList.toNel map { sibs =>
+        resolver(sibs)
+      }).sequence[ScaliakConverter[T]#ReadResult, T]
+    } getOrElse (new RuntimeException("::").failureNel)
+
   }
 
-  private def riakStoreResponseToResult[T](key: String, r: StoreOperation.Response, allowTombstones: Boolean = false)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNel[Throwable, Option[T]] = {
-    ((r.getObjectList.asScala filter {
-      allowTombstones || !_.isDeleted
-    } map { x =>
-      {
-        val rro: ReadObject = new RichRiakObject(key, name, x)
-        converter.read(rro)
-      }
-    }).toList.toNel map { sibs =>
-      resolver(sibs)
-    }).sequence[ScaliakConverter[T]#ReadResult, T]
+  private def riakStoreResponseToResult[T](key: String, r: Try[StoreOperation.Response], allowTombstones: Boolean = false)(implicit converter: ScaliakConverter[T], resolver: ScaliakResolver[T]): ValidationNel[Throwable, Option[T]] = {
+    r.map { todo =>
+      ((todo.getObjectList.asScala filter {
+        allowTombstones || !_.isDeleted
+      } map { x =>
+        {
+          val rro: ReadObject = new RichRiakObject(key, name, x)
+          converter.read(rro)
+        }
+      }).toList.toNel map { sibs =>
+        resolver(sibs)
+      }).sequence[ScaliakConverter[T]#ReadResult, T]
+    } getOrElse (new RuntimeException("::").failureNel)
   }
 
   private def prepareStoreOps(key: String, obj: RiakObject, w: WArgument, pw: PWArgument, dw: DWArgument,

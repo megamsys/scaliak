@@ -22,7 +22,6 @@ import scalaz.effect.IO
 
 class ScaliakClient(rawClient: RawClientWithStreaming) extends ScaliakBoot {
 
-  def pb = rawClient
   def rawOrPool = Left(rawClient)
 
 }

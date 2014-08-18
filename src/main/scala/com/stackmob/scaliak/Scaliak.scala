@@ -19,8 +19,12 @@ package com.stackmob.scaliak
 import scala.collection.immutable.List
 import com.basho.riak.client.core.RiakNode
 
-object Scaliak { 
-  
+object Scaliak {
+
+  def clientPool(hosts: List[String], port: Int = RiakNode.Builder.DEFAULT_REMOTE_PORT): ScaliakClientPool = {
+    new ScaliakPbClientPool(hosts, port)
+  }
+
   def client(hosts: List[String], port: Int = RiakNode.Builder.DEFAULT_REMOTE_PORT): ScaliakClient = {
     val rawClient = new PBStreamingClient(hosts, port)
     new ScaliakClient(rawClient)

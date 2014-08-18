@@ -32,6 +32,7 @@ import com.basho.riak.client.api.cap.VClock
 import com.basho.riak.client.core.query.RiakObject
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 import com.basho.riak.client.api.cap.{ UnresolvedConflictException, Quorum }
 import com.basho.riak.client.core.query.indexes.{ StringBinIndex, LongIntIndex }
 import com.basho.riak.client.core.operations.SecondaryIndexQueryOperation
@@ -52,6 +53,7 @@ class PingAndListBucketsSpecs extends RiakSpecs {
       "List Buckets" ^ br ^
       "Ping Riak" ^ br ^
       "can do a ping to riak" ! ping.testPing ^ br ^
+      "can not ping riak" ! ping.testFaultyPing ^ br ^
       "can get the list of buckets" ! listBuckets.testList ^ br ^
       "can figure out charset UTF8" ! charSet.testCharset1 ^ br ^
       "can figure out invalid charset" ! charSet.testCharset2 ^ br ^
@@ -60,15 +62,21 @@ class PingAndListBucketsSpecs extends RiakSpecs {
       end
 
   object ping {
-    val result = riak.client.pb.ping
+    val result = riak.runOnClient(_.ping)
 
     def testPing = {
-      result must haveClass[scala.runtime.BoxedUnit]
+      result must haveClass[scala.util.Success[Null]]
+    }
+
+    def testFaultyPing = {
+      val result1 = riak.runOnFailureClient(_.ping)
+
+      result1 must haveClass[scala.util.Failure[Throwable]]
     }
   }
 
   object listBuckets {
-    val result = riak.client.listBuckets.unsafePerformIO().toOption
+    val result = riak.runOnClient(_.listBuckets()).toOption
 
     def testList = {
       result must beSome.which { _.contains("test_bucket") }
@@ -77,7 +85,7 @@ class PingAndListBucketsSpecs extends RiakSpecs {
 
   object charSet {
     val cdata1 = Some("""<meta http-equiv="content-type" content="text/html; charset=UTF-8">""")
-    val invalid_data1 =Some("""<meta http-equiv="content-type" content="text/html; charset=UTF-8A">""")
+    val invalid_data1 = Some("""<meta http-equiv="content-type" content="text/html; charset=UTF-8A">""")
     val cdata3 = None
 
     private lazy val charsetMatcher = """.*;\s*charset=([^\(\)<>@,;:\\"/\[\]\?={}\s\t]+);?\s*.*$""".r

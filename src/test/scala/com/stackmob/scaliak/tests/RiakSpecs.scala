@@ -24,29 +24,49 @@ import com.stackmob.scaliak._
  *
  */
 object riakSetup {
-
-  lazy val client = Scaliak.client(List("127.0.0.1"))
+ 
+  lazy val sclient  = Scaliak.client(List("127.0.0.1"))
+  lazy val sclientp = Scaliak.clientPool(List("127.0.0.1"))
+  
+  lazy val rawClientOrClientPool: Either[RawClientWithStreaming, ScaliakClientPool] = sclientp.rawOrPool
+  lazy val faultyClientOrClientPool: Either[RawClientWithStreaming, ScaliakClientPool] = Scaliak.client(List("127.0.22.1")).rawOrPool
 
   val testBucket = "specsbucket"
   val testKey = "specskey2"
   val testKey1 = "specskey1"
   val testContentType = "text/plain; charset=UTF-8"
 
-  lazy val bucket = client.bucket(testBucket).unsafePerformIO().toOption
+  lazy val bucket = sclientp.bucket(testBucket).unsafePerformIO().toOption
 
-  def shutdown() = client.pb.shutdown()
+  def runOnFailureClient[A](f: RawClientWithStreaming => A): A = {
+    faultyClientOrClientPool match {
+      case Left(client) => f(client)
+      case Right(pool)  => pool.withClient[A](f)
+    }
+  }
+  
+  def runOnClient[A](f: RawClientWithStreaming => A): A = {
+    rawClientOrClientPool match {
+      case Left(client) => f(client)
+      case Right(pool)  => pool.withClient[A](f)
+    }
+  }
+  
+  def shutdown() = runOnClient(_.shutdown())
 }
 
 trait RiakSpecs extends Specification {
 
   lazy val riak = riakSetup
 
-  override def map(fs: => Fragments) = Step(riak.client) ^ fs ^ Step(riak.shutdown())
+  override def map(fs: => Fragments) = Step(riak.sclientp) ^ fs ^ Step(riak.shutdown())
+  
+  
 }
 
 trait RiakWithBucketSpecs extends Specification {
 
   lazy val riak = riakSetup
 
-  override def map(fs: => Fragments) = Step(riak.client) ^ Step(riak.bucket) ^ fs ^ Step(riak.shutdown())
+  override def map(fs: => Fragments) = Step(riak.sclientp) ^ Step(riak.bucket) ^ fs ^ Step(riak.shutdown())
 }

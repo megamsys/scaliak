@@ -203,7 +203,7 @@ class StoreSpecs extends RiakWithBucketSpecs {
     val strres = strres1.toOption
 
     def performsWrite = {
-      strres must beNone
+      strres must beSome
     }
 
   }
