@@ -82,6 +82,8 @@ class PingAndListBucketsSpecs extends RiakSpecs {
       result must beSome.which { _.contains("test_bucket") }
     }
   }
+  
+  
 
   object charSet {
     val cdata1 = Some("""<meta http-equiv="content-type" content="text/html; charset=UTF-8">""")

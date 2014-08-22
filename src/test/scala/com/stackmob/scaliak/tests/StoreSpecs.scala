@@ -68,8 +68,7 @@ class StoreSpecs extends RiakWithBucketSpecs {
     o => (new DummyDomainObject(o.key)).successNel[Throwable],
     o => {
       WriteObject(o.someField, dummyWriteVal.getBytes)
-    },
-    o => o.someField)
+    })
 
   val mutationValueAddition = "abc"
 

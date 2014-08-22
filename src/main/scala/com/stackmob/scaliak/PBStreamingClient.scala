@@ -27,7 +27,7 @@ import com.basho.riak.client.core.operations._
 import com.basho.riak.client.core.query.Location
 import com.basho.riak.client.core.query.Namespace
 import com.basho.riak.client.core.query.RiakObject
-import com.basho.riak.client.core.{ RiakCluster, RiakNode }
+import com.basho.riak.client.core.RiakCluster
 import com.basho.riak.client.core.query.BucketProperties
 import com.basho.riak.client.core.query.Namespace
 import com.basho.riak.client.core.util.BinaryValue
@@ -37,22 +37,9 @@ import scala.util.{ Try, Success, Failure }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConverters._
 
-class PBStreamingClient(hosts: List[String], port: Int) extends RawClientWithStreaming {
+class PBStreamingClient(cluster: MaybeCluster) extends RawClientWithStreaming {
 
-  val nodes = Try({
-    RiakNode.Builder.buildNodes(
-      (new RiakNode.Builder()
-        withRemotePort (port)
-        withMinConnections (5)), new java.util.LinkedList(hosts.asJava))
-  })
-
-  lazy val cluster: Try[RiakCluster] = for {
-    suc_nodes <- nodes
-    suc_clust <- Try(new RiakCluster.Builder(suc_nodes).build())
-  } yield {
-    suc_clust.start
-    suc_clust
-  }
+  println("pb  stream: cluster: => :" +cluster)
 
   def ping(): Try[Void] = cluster flatMap (_.execute(new PingOperation()))
 
@@ -79,6 +66,8 @@ class PBStreamingClient(hosts: List[String], port: Int) extends RawClientWithStr
     }
   }
 
+  def listKeys(liop: ListKeysOperation): Try[ListKeysOperation.Response] = cluster flatMap (_.execute(liop))
+
   def fetch(foop: FetchOperation): Try[FetchOperation.Response] = cluster flatMap (_.execute(foop))
 
   def storeBucket(sbop: StoreBucketPropsOperation): Try[Void] = cluster flatMap (_.execute(sbop))
@@ -91,7 +80,7 @@ class PBStreamingClient(hosts: List[String], port: Int) extends RawClientWithStr
     }) match {
       case Success(s) => Success(s.getEntryList.asScala.toList map (_.getObjectKey.toString))
       case Failure(t) => Failure(t)
-    }    
+    }
   }
 
   def delete(deop: DeleteOperation): Try[Void] = cluster flatMap (_.execute(deop))

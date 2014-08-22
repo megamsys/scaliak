@@ -28,6 +28,7 @@ import com.basho.riak.client.core.query.functions.Function
 import com.basho.riak.client.core.operations.FetchOperation
 import com.basho.riak.client.core.operations.StoreOperation
 import com.basho.riak.client.core.operations.DeleteOperation
+import com.basho.riak.client.core.operations.ListKeysOperation
 import com.basho.riak.client.core.util.BinaryValue
 import com.basho.riak.client.core.query.RiakObject
 
@@ -82,9 +83,13 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
    * This is more expensive but once again run this operation w/ care
    */
 
-  //def listKeys(): IO[Validation[Throwable, Stream[String]]] = {
-  //  runOnClient(_.listKeys(name).pure[IO].map(_.asScala.toStream.success[Throwable]) except { e => e.failure[Stream[String]].pure[IO] })
-  // }
+  def listKeys(): IO[Validation[Throwable, Stream[String]]] = {
+    //TO-DO : todo.{map _}.get is actually Try.get. We need to handle exception.
+    val lkb = new ListKeysOperation.Builder(ns).build()
+    runOnClient(_.listKeys(lkb)).pure[IO].map { todo => { todo.map { _.getKeys.asScala.toStream.map(_.toString) }.get }.success[Throwable] }.except {
+      _.failure[Stream[String]].pure[IO]
+    }
+   }
 
   /*
    * Creates an IO action that fetches as object by key
@@ -419,8 +424,6 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
 trait ScaliakConverter[T] {
   type ReadResult[T] = ValidationNel[Throwable, T]
 
-  def key(o: T): String
-
   def read(o: ReadObject): ReadResult[T]
 
   def write(o: T): WriteObject
@@ -432,10 +435,7 @@ object ScaliakConverter extends ScaliakConverters {
 
 trait ScaliakConverters {
 
-  def newConverter[T](r: ReadObject => ValidationNel[Throwable, T], w: T => WriteObject,
-    y: T => String) = new ScaliakConverter[T] {
-
-    def key(o: T) = y(o)
+  def newConverter[T](r: ReadObject => ValidationNel[Throwable, T], w: T => WriteObject) = new ScaliakConverter[T] {
 
     def read(o: ReadObject) = r(o)
 
@@ -448,8 +448,7 @@ trait ScaliakConverters {
     ((o: ReadObject) =>
       WriteObject(key = o.key, value = o.bytes, contentType = o.contentType,
         links = o.links, metadata = o.metadata, binIndexes = o.binIndexes, intIndexes = o.intIndexes,
-        vTag = o.vTag, lastModified = o.lastModified)),
-    ((o: ReadObject) => o.key))
+        vTag = o.vTag, lastModified = o.lastModified)))
 }
 
 sealed trait ScaliakResolver[T] {

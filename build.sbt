@@ -9,9 +9,11 @@ import sbt._
 
 name := "scaliak"
 
-organization := "org.megam"
+organization := "com.stackmob"
 
-scalaVersion := "2.11.2"
+scalaVersion := "2.10.4"
+
+crossScalaVersions := Seq("2.10.4", "2.11.2")
 
 scalacOptions := Seq(
   "-target:jvm-1.7",
@@ -21,11 +23,11 @@ scalacOptions := Seq(
   "-Xcheckinit",
   "-Xlint",
   "-Xverify",
-  "-Yconst-opt",
   "-Yinline",
   "-Yclosure-elim",
-  "-Ybackend:GenBCode",
-  "closurify:delegating", 
+  //"-Yconst-opt", 
+  //"-Ybackend:GenBCode",
+  //"closurify:delegating",
   "-language:implicitConversions",
   "-language:higherKinds",
   "-language:reflectiveCalls",
@@ -61,8 +63,7 @@ scalacOptions := Seq(
       "com.basho.riak" % "riak-client" % "2.0.0.RC1",
       "org.apache.commons" % "commons-pool2" % "2.2",
       "org.slf4j" % "slf4j-api" % "1.7.7",
-      //"ch.qos.logback" % "logback-classic" % "1.1.2",
-      "org.specs2" % "specs2_2.11" % "2.4" % "test"
+      "org.specs2" %% "specs2" % "2.4" % "test"
       )
     }
 

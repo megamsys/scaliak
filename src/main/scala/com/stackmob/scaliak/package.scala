@@ -18,9 +18,14 @@ package com.stackmob
 
 import java.util.Date
 import com.basho.riak.client.api.cap.VClock
+import scala.util.Try
+import com.basho.riak.client.core.RiakCluster
 
 package object scaliak {
-
+  
+  type LiftCluster = (Tuple2[List[String],Int] => MaybeCluster)
+  type MaybeCluster = Try[RiakCluster] 
+  
   implicit def boolToAllowSiblingsArg(b: Boolean): AllowSiblingsArgument = AllowSiblingsArgument(Option(b))
   implicit def boolToLastWriteWinsArg(b: Boolean): LastWriteWinsArgument = LastWriteWinsArgument(Option(b))
   implicit def intToNValArg(i: Int): NValArgument = NValArgument(Option(i))

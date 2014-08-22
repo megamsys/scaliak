@@ -68,12 +68,10 @@ class DeleteSpecs extends RiakWithBucketSpecs {
   val dummyWriteVal = "dummy"
   val dummyDomainConverter = ScaliakConverter.newConverter[DummyDomainObject](
     o => (new DummyDomainObject(o.key)).successNel[Throwable],
-    o => WriteObject(o.someField, dummyWriteVal.getBytes),
-    o => o.someField)
+    o => WriteObject(o.someField, dummyWriteVal.getBytes))
   val mutationValueAddition = "abc"
   val dummyDomainMutation = ScaliakMutation.newMutation[DummyDomainObject] {
-    (mbOld, newObj) =>
-      {
+    (mbOld, newObj) =>      {
         new DummyDomainObject(newObj.someField + mutationValueAddition)
       }
   }
