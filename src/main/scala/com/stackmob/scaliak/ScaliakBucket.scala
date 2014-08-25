@@ -18,7 +18,7 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-import scalaz.Validation.FlatMap._
+//import scalaz.Validation.FlatMap._
 import scalaz.effect.IO
 
 import com.basho.riak.client.core.query.Location
@@ -161,7 +161,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
 
     val obk = converter.write(obj)
 
-    (Validation.fromTryCatchThrowable[IO[ValidationNel[Throwable, Option[T]]], Throwable] {
+    (Validation.fromTryCatch[IO[ValidationNel[Throwable, Option[T]]]] {
       new RiakObject().setValue(BinaryValue.create(obk._bytes))
       for {
         resp <- rawFetch(obk._key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock)
