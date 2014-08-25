@@ -52,18 +52,18 @@ scalacOptions := Seq(
   resolvers += "JBoss" at "https://repository.jboss.org/nexus/content/groups/public"
 
   libraryDependencies ++= {
-    val scalazVersion = "7.1.0"
+    val scalazVersion = "7.0.6"
     Seq(
       "org.json" % "json" % "20140107",
       "org.scalaz" %% "scalaz-core" % scalazVersion,
       "org.scalaz" %% "scalaz-iteratee" % scalazVersion,
       "org.scalaz" %% "scalaz-effect" % scalazVersion,
       "org.scalaz" %% "scalaz-concurrent" % scalazVersion % "test",
-      "net.liftweb" %% "lift-json-scalaz7" % "2.6-RC1",
+      "net.liftweb" %% "lift-json-scalaz7" % "3.0-M1",
       "com.basho.riak" % "riak-client" % "2.0.0.RC1",
       "org.apache.commons" % "commons-pool2" % "2.2",
-      "org.slf4j" % "slf4j-api" % "1.7.7",
-      "org.specs2" %% "specs2" % "2.4" % "test"
+      "org.slf4j" % "slf4j-api" % "1.7.7",      
+      "org.specs2" %% "specs2" % "2.4.1-scalaz-7.0.6" % "test"
       )
     }
 
