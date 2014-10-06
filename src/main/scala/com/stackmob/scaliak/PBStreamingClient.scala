@@ -20,7 +20,7 @@ import scalaz.effect.IO
 import scalaz.syntax.monad._
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.basho.riak.client.api._
-import com.basho.riak.client.api.commands.StoreBucketProperties
+import com.basho.riak.client.api.commands.buckets.StoreBucketProperties
 import com.basho.riak.client.api.commands.indexes.{ SecondaryIndexQuery }
 
 import com.basho.riak.client.core.operations._
@@ -39,7 +39,6 @@ import scala.collection.JavaConverters._
 
 class PBStreamingClient(cluster: MaybeCluster) extends RawClientWithStreaming {
 
-  println("pb  stream: cluster: => :" +cluster)
 
   def ping(): Try[Void] = cluster flatMap (_.execute(new PingOperation()))
 
