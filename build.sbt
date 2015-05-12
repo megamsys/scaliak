@@ -1,22 +1,14 @@
-import net.virtualvoid.sbt.graph.Plugin
-import org.scalastyle.sbt.ScalastylePlugin
-import ScaliakReleaseSteps._
-import sbtrelease._
-import ReleaseStateTransformations._
-import ReleasePlugin._
-import ReleaseKeys._
 import sbt._
+import sbt.Keys._
 
 name := "scaliak"
 
-organization := "com.stackmob"
+organization := "io.megam"
 
-scalaVersion := "2.10.4"
-
-crossScalaVersions := Seq("2.10.4", "2.11.2")
+scalaVersion := "2.11.6"
 
 scalacOptions := Seq(
-  "-target:jvm-1.7",
+  "-target:jvm-1.8",
   "-deprecation",
   "-feature",
   "-optimise",
@@ -25,9 +17,9 @@ scalacOptions := Seq(
   "-Xverify",
   "-Yinline",
   "-Yclosure-elim",
-  //"-Yconst-opt",
-  //"-Ybackend:GenBCode",
-  //"closurify:delegating",
+  "-Yconst-opt",
+  "-Ybackend:GenBCode",
+  "closurify:delegating",
   "-language:implicitConversions",
   "-language:higherKinds",
   "-language:reflectiveCalls",
@@ -52,108 +44,40 @@ scalacOptions := Seq(
   resolvers += "JBoss" at "https://repository.jboss.org/nexus/content/groups/public"
 
   libraryDependencies ++= {
-    val scalazVersion = "7.0.6"
+    val scalazVersion = "7.1.2"
     Seq(
-      "org.json" % "json" % "20140107",
+      "org.json" % "json" % "20141113",
       "org.scalaz" %% "scalaz-core" % scalazVersion,
       "org.scalaz" %% "scalaz-iteratee" % scalazVersion,
       "org.scalaz" %% "scalaz-effect" % scalazVersion,
       "org.scalaz" %% "scalaz-concurrent" % scalazVersion % "test",
-      "net.liftweb" %% "lift-json-scalaz7" % "3.0-M1",
-      "com.basho.riak" % "riak-client" % "2.0.0",
-      "org.apache.commons" % "commons-pool2" % "2.2",
-      "org.slf4j" % "slf4j-api" % "1.7.7",
-      "org.specs2" %% "specs2" % "2.4.1-scalaz-7.0.6" % "test"
+      "net.liftweb" %% "lift-json-scalaz7" % "3.0-M5-1",
+      "com.basho.riak" % "riak-client" % "2.0.1",
+      "org.apache.commons" % "commons-pool2" % "2.3",
+      "org.slf4j" % "slf4j-api" % "1.7.12",
+      "org.specs2" %% "specs2-core" % "3.6" % "test"
       )
     }
 
+
+    resolvers += Resolver.bintrayRepo("scalaz", "releases")
+
     logBuffered := false
 
-    Plugin.graphSettings
+    lazy val commonSettings = Seq(
+      version in ThisBuild := "0.11",
+      organization in ThisBuild := "Megam Systems"
+    )
 
-    ScalastylePlugin.Settings
-
-    releaseSettings
-
-    releaseProcess := Seq[ReleaseStep](
-      checkSnapshotDependencies,
-      inquireVersions,
-      runTest,
-      setReleaseVersion,
-      commitReleaseVersion,
-      setReadmeReleaseVersion,
-      tagRelease,
-      publishArtifacts,
-      setNextVersion,
-      commitNextVersion,
-      pushChanges
-      )
-
-      publishTo <<= version { v: String =>
-        val nexus = "https://oss.sonatype.org/"
-        if (v.trim.endsWith("SNAPSHOT")) {
-          Some("snapshots" at nexus + "content/repositories/snapshots")
-          } else {
-            Some("releases" at nexus + "service/local/staging/deploy/maven2")
-          }
-        }
-
-        publishMavenStyle := true
-
-        publishArtifact in Test := false
-
-        testOptions in Test += Tests.Argument("html", "console")
-
-        pomIncludeRepository := { _ => false }
-
-        pomExtra := (
-          <url>https://github.com/megamsys/scaliak</url>
-          <licenses>
-          <license>
-          <name>Apache 2</name>
-          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-          <distribution>repo</distribution>
-          </license>
-          </licenses>
-          <scm>
-          <url>git@github.com:megamsys/scaliak.git</url>
-          <connection>scm:git:git@github.com:megamsys/scaliak.git</connection>
-          </scm>
-          <developers>
-          <developer>
-          <id>jrwest</id>
-          <name>Jordan West</name>
-          <url>http://www.stackmob.com</url>
-          </developer>
-          <developer>
-          <id>aaronschlesinger</id>
-          <name>Aaron Schlesinger</name>
-          <url>http://www.stackmob.com</url>
-          </developer>
-          <developer>
-          <id>taylorleese</id>
-          <name>Taylor Leese</name>
-          <url>http://www.stackmob.com</url>
-          </developer>
-          <developer>
-          <id>milesoconnell</id>
-          <name>Miles O'Connell</name>
-          <url>http://www.stackmob.com</url>
-          </developer>
-          <developer>
-          <id>dougrapp</id>
-          <name>Doug Rapp</name>
-          <url>http://www.stackmob.com</url>
-          </developer>
-          <developer>
-          <id>alexyakushev</id>
-          <name>Alex Yakushev</name>
-          <url>http://www.stackmob.com</url>
-          </developer>
-          <developer>
-          <id>willpalmeri</id>
-          <name>Will Palmeri</name>
-          <url>http://www.stackmob.com</url>
-          </developer>
-          </developers>
-          )
+    lazy val root = (project in file(".")).
+    settings(commonSettings).
+    settings(
+    sbtPlugin := true,
+    name := "scaliak",
+    description := """This is the fork of scaliak https://github.com/stackmob/scaliak upgraded to scala 2.11 and scalaz 7.1.2. We primarily use it  in our API Gateway : https://github.com/megamsys/megam_gateway.git
+    Feel free to collaborate at https://github.com/megamsys/scaliak.git.""",
+    licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html")),
+    publishMavenStyle := false,
+    bintrayOrganization := Some("megamsys"),
+    bintrayRepository := "scala"
+  )
