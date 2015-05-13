@@ -1,11 +1,19 @@
-import sbt._
-import sbt.Keys._
-
 name := "scaliak"
 
 organization := "io.megam"
 
 scalaVersion := "2.11.6"
+
+description := """This is the fork of scaliak https://github.com/stackmob/scaliak upgraded to scala 2.11 and scalaz 7.1.2. We primarily use it  in our API Gateway : https://github.com/megamsys/megam_gateway.git
+Feel free to collaborate at https://github.com/megamsys/scaliak.git."""
+
+licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html"))
+
+bintrayOrganization := Some("megamsys")
+
+bintrayRepository := "scala"
+
+publishMavenStyle := true
 
 scalacOptions := Seq(
   "-target:jvm-1.8",
@@ -19,7 +27,6 @@ scalacOptions := Seq(
   "-Yclosure-elim",
   "-Yconst-opt",
   "-Ybackend:GenBCode",
-  "closurify:delegating",
   "-language:implicitConversions",
   "-language:higherKinds",
   "-language:reflectiveCalls",
@@ -29,19 +36,9 @@ scalacOptions := Seq(
 
   incOptions := incOptions.value.withNameHashing(true)
 
-  resolvers += "Twitter Repo" at "http://maven.twttr.com"
-
-  resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases"
-
-  resolvers += "Sonatype Releases" at "https://oss.sonatype.org/content/public"
-
-  resolvers += "Typesafe Snapshots" at "http://repo.typesafe.com/typesafe/snapshots"
-
-  resolvers  +=  "Sonatype Snapshots"  at  "https://oss.sonatype.org/content/repositories/snapshots"
-
-  resolvers  += "Scala-Tools Maven2 Snapshots Repository" at "http://scala-tools.org/repo-snapshots"
-
-  resolvers += "JBoss" at "https://repository.jboss.org/nexus/content/groups/public"
+  resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots"),
+  Resolver.bintrayRepo("scalaz", "releases")
+)
 
   libraryDependencies ++= {
     val scalazVersion = "7.1.2"
@@ -60,26 +57,3 @@ scalacOptions := Seq(
 
       )
     }
-
-
-    resolvers += Resolver.bintrayRepo("scalaz", "releases")
-
-    logBuffered := false
-
-    lazy val commonSettings = Seq(
-      version in ThisBuild := "0.12",
-      organization in ThisBuild := "Megam Systems"
-    )
-
-    lazy val root = (project in file(".")).
-    settings(commonSettings).
-    settings(
-    sbtPlugin := true,
-    name := "scaliak",
-    description := """This is the fork of scaliak https://github.com/stackmob/scaliak upgraded to scala 2.11 and scalaz 7.1.2. We primarily use it  in our API Gateway : https://github.com/megamsys/megam_gateway.git
-    Feel free to collaborate at https://github.com/megamsys/scaliak.git.""",
-    licenses += ("Apache-2.0", url("https://www.apache.org/licenses/LICENSE-2.0.html")),
-    publishMavenStyle := false,
-    bintrayOrganization := Some("megamsys"),
-    bintrayRepository := "scala"
-  )
