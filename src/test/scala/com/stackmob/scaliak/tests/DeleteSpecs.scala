@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright [2013-2014] [Megam Systems]
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -53,7 +53,6 @@ class DeleteSpecs extends RiakWithBucketSpecs {
   from Riak 2.0.
   """ ^
       p ^
-      endp ^
   "Deleting Data" ^ br ^
     "By Key" ^ br ^
     "Uses the raw client passing in the bucket name, key and delete meta" ! deleteByKey.test ^ p ^
@@ -61,7 +60,6 @@ class DeleteSpecs extends RiakWithBucketSpecs {
     "Deletes the object by its key" ! deleteScaliakObject.test ^ p ^
     "By Domain Object" ^ br ^
     "Deletes the object by its key" ! deleteDomainObject.test ^ p ^
-    endp ^
     end
 
   class DummyDomainObject(val someField: String)
@@ -83,11 +81,7 @@ class DeleteSpecs extends RiakWithBucketSpecs {
     implicit val converter = dummyDomainConverter
     lazy val result = bucket.delete(obj).unsafePerformIO().toOption
 
-    def test = {
-      result must beSome.like {
-        case obj => obj must haveClass[scala.runtime.BoxedUnit]
-      }
-    }
+    def test =     result must beSome
   }
 
   object deleteScaliakObject {
@@ -96,11 +90,7 @@ class DeleteSpecs extends RiakWithBucketSpecs {
     val obj = ReadObject(riak.testKey, riak.testBucket, riak.testContentType, new BasicVClock(""), "".getBytes)
     lazy val result = bucket.delete(obj).unsafePerformIO().toOption
 
-    def test = {
-      result must beSome.like {
-        case obj => obj must haveClass[scala.runtime.BoxedUnit]
-      }
-    }
+    def test =  result must beSome
   }
 
   object deleteByKey  {
@@ -108,12 +98,8 @@ class DeleteSpecs extends RiakWithBucketSpecs {
 
     lazy val result = bucket.deleteByKey(riak.testKey).unsafePerformIO().toOption
 
-    def test = {
-      result must beSome.like {
-        case obj => obj must haveClass[scala.runtime.BoxedUnit]
-      }
-    }
+    def test = result must beSome
   }
 
- 
+
 }

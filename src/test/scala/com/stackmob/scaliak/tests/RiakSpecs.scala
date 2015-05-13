@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright [2013-2014] [Megam Systems]
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,8 @@
 package com.stackmob.scaliak.tests
 
 import org.specs2.Specification
-import org.specs2.specification.{ Step, Fragments }
+import org.specs2.specification.Step
+import org.specs2.specification.core.{ Fragments }
 import com.stackmob.scaliak._
 
 /**
@@ -24,10 +25,10 @@ import com.stackmob.scaliak._
  *
  */
 object riakSetup {
- 
+
   lazy val sclient  = Scaliak.client(List("127.0.0.1"))
   lazy val sclientp = Scaliak.clientPool(List("127.0.0.1"))
-  
+
   lazy val rawClientOrClientPool: Either[RawClientWithStreaming, ScaliakClientPool] = sclientp.rawOrPool
   lazy val faultyClientOrClientPool: Either[RawClientWithStreaming, ScaliakClientPool] = Scaliak.client(List("127.0.22.1")).rawOrPool
 
@@ -44,14 +45,14 @@ object riakSetup {
       case Right(pool)  => pool.withClient[A](f)
     }
   }
-  
+
   def runOnClient[A](f: RawClientWithStreaming => A): A = {
     rawClientOrClientPool match {
       case Left(client) => f(client)
       case Right(pool)  => pool.withClient[A](f)
     }
   }
-  
+
   def shutdown() = runOnClient(_.shutdown())
 }
 
@@ -60,8 +61,8 @@ trait RiakSpecs extends Specification {
   lazy val riak = riakSetup
 
   override def map(fs: => Fragments) = Step(riak.sclientp) ^ fs ^ Step(riak.shutdown())
-  
-  
+
+
 }
 
 trait RiakWithBucketSpecs extends Specification {

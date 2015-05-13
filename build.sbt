@@ -55,7 +55,9 @@ scalacOptions := Seq(
       "com.basho.riak" % "riak-client" % "2.0.1",
       "org.apache.commons" % "commons-pool2" % "2.3",
       "org.slf4j" % "slf4j-api" % "1.7.12",
-      "org.specs2" %% "specs2-core" % "3.6" % "test"
+      "org.specs2" %% "specs2-core" % "3.6" % "test",
+      "org.specs2" %% "specs2-matcher-extra" % "3.6" % "test"
+
       )
     }
 
@@ -65,7 +67,7 @@ scalacOptions := Seq(
     logBuffered := false
 
     lazy val commonSettings = Seq(
-      version in ThisBuild := "0.11",
+      version in ThisBuild := "0.12",
       organization in ThisBuild := "Megam Systems"
     )
 

@@ -1,4 +1,4 @@
-/* 
+/*
 ** Copyright [2013-2014] [Megam Systems]
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,7 +49,6 @@ class FetchIndexSpecs extends RiakWithBucketSpecs {
   from and storing data in Riak.
   """ ^
       p ^
-      endp ^
       "Fetching by Index" ^ br ^
       "by value" ^ br ^
       "if the value is a string a BinValueQuery is performed" ! fetchIndexByValue.testBinValueGeneratesBinQuery ^ br ^
@@ -97,6 +96,6 @@ class FetchIndexSpecs extends RiakWithBucketSpecs {
 
   }
 
-  
+
 
 }

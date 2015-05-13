@@ -49,12 +49,12 @@ class StoreSpecs extends RiakWithBucketSpecs {
       "Writing Data" ^ br ^
       "With No Conversion" ^ br ^
       "When the Key Being Fetched Does Not Exist" ^ br ^
-      """Given the default "Clobber Mutation" """ ^ endp ^
+      """Given the default "Clobber Mutation" """ ^
       "Writes the ReadObject as passed in (converted to an RiakObject)" ! writeMissing.performsWrite ^ br ^
       "returns successfully with the stored object as a ReadObject instance" ! writeMissing.returnBody ^ br ^
       p ^
       "When the Key Being Fetched Exists" ^ br ^
-      """Given the default "Clobber Mutator" """ ^ endp ^
+      """Given the default "Clobber Mutator" """ ^
       "Writes the ReadObject as passed in (converted to an RiakObject)" ! writeExisting.performsWrite ^ br ^
       "Can store the links on an object" ! writeExisting.testStoreUpdateLinks ^ br ^
       "Can put the links on an object" ! writeExisting.testPutUpdateLinks ^ br ^

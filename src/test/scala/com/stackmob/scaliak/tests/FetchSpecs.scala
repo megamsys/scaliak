@@ -67,7 +67,6 @@ class FetchSpecs extends RiakWithBucketSpecs {
       "numLinks returns 0" ! simpleFetch.testLinksReturnsNumLinksSize ^ br ^
       "containsLink returns true for any link" ! simpleFetch.testLinksContainsLinkReturnsTrue ^ p ^
       "if the fetched object has a non-empty list of links" ^
-      endp ^
       end
 
   object simpleFetch {
@@ -105,20 +104,20 @@ class FetchSpecs extends RiakWithBucketSpecs {
       result must beSome.which { _.vClockString == mock1VClockStr }
     }
 
-    def testVTag = {      
+    def testVTag = {
       result must beSome.which { _.vTag == mock1VTag }
     }
 
-    def testLastModified = {     
+    def testLastModified = {
       result must beSome.like {
         case obj => obj.lastModified must_== mock1LastModified
       }
     }
 
-    def tContentType = {      
+    def tContentType = {
       result must beSome.which { _.contentType == riak.testContentType }
     }
-    
+
     def testLinksContainsLinkReturnsTrue = {
       val link1 = ScaliakLink(riak.testBucket, riak.testKey, "invite")
       val Some(r) = result
@@ -140,7 +139,7 @@ class FetchSpecs extends RiakWithBucketSpecs {
       result must beSome.which { _.numLinks > 0 }
     }
 
-    
+
 
     def testEmptyMetadataMap = {
       result must beSome.like {
