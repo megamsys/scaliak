@@ -14,7 +14,7 @@ Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functio
 	Resolver.bintrayRepo("scalaz", "releases"),
 	Resolver.bintrayRepo("io.megam", "scala"))
 
-	libraryDependencies += "io.megam" % "scaliak" % "0.13"
+	libraryDependencies += "io.megam" % "scaliak" % "0.14"
 
 ```
 

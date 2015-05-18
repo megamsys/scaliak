@@ -48,7 +48,7 @@ scalacOptions := Seq(
       "org.scalaz" %% "scalaz-iteratee" % scalazVersion,
       "org.scalaz" %% "scalaz-effect" % scalazVersion,
       "org.scalaz" %% "scalaz-concurrent" % scalazVersion % "test",
-      "net.liftweb" %% "lift-json-scalaz7" % "3.0-M5-1",
+      "net.liftweb" %% "lift-json-scalaz7" % "2.6.2",
       "com.basho.riak" % "riak-client" % "2.0.1",
       "org.apache.commons" % "commons-pool2" % "2.3",
       "org.slf4j" % "slf4j-api" % "1.7.12",
