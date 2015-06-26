@@ -1,6 +1,6 @@
 # Scaliak
 
-[![Build Status](https://travis-ci.org/stackmob/scaliak.png?branch=master)](https://travis-ci.org/stackmob/scaliak)
+[![Build Status](https://travis-ci.org/megamsys/scaliak.png?branch=master)](https://travis-ci.org/megamsys/scaliak)
 
 Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functional Twist. It is currently being used in production at Megam.
 
@@ -17,6 +17,22 @@ Scaliak is a scala-ified version of the High-Level Riak Java Client w/ a Functio
 	libraryDependencies += "io.megam" % "scaliak" % "0.14"
 
 ```
+
+#Publishing in bintray
+
+For more information [https://github.com/softprops/bintray-sbt](https://github.com/softprops/bintray-sbt)
+
+```
+#from the sbt REPL
+
+> bintrayChangeCredentials
+
+> bintrayWhoami
+
+> publish
+
+```
+
 
 ## Status
 
