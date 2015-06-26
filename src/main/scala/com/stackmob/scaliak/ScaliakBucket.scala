@@ -18,7 +18,7 @@ package com.stackmob.scaliak
 
 import scalaz._
 import Scalaz._
-//import scalaz.Validation.FlatMap._
+import scalaz.Validation.FlatMap._
 import scalaz.effect.IO
 
 import com.basho.riak.client.core.query.Location
@@ -161,7 +161,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
 
     val obk = converter.write(obj)
 
-    (Validation.fromTryCatch[IO[ValidationNel[Throwable, Option[T]]]] {
+    (Validation.fromTryCatchThrowable[IO[ValidationNel[Throwable, Option[T]]], Throwable] {
       new RiakObject().setValue(BinaryValue.create(obk._bytes))
       for {
         resp <- rawFetch(obk._key, r, pr, notFoundOk, basicQuorum, returnDeletedVClock)
@@ -230,7 +230,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
       runOnClient {
         _.fetch(emptyFetchMeta).pure[IO]
       }
-    }).get 
+    }).get
 
     (for {
       mbHeadResponse <- mbFetchHead
@@ -355,7 +355,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
 
   /*
    * TO-DO
-   
+
     private def generateLinkWalkSpec(bucket: String, key: String, steps: LinkWalkSteps) = {
     new LinkWalkSpec(steps, bucket, key)
   }
@@ -364,7 +364,7 @@ class ScaliakBucket(rawClientOrClientPool: Either[RawClientWithStreaming, Scalia
     new MapReduceSpec(mapReduceJSONString)
   }
 
-   
+
   import linkwalk._
 
   // This method discards any objects that have conversion errors

@@ -58,7 +58,6 @@ class PingAndListBucketsSpecs extends RiakSpecs {
       "can figure out charset UTF8" ! charSet.testCharset1 ^ br ^
       "can figure out invalid charset" ! charSet.testCharset2 ^ br ^
       "can figure out charset ISO8859" ! charSet.testCharset3 ^ br ^
-      endp ^
       end
 
   object ping {
@@ -82,8 +81,8 @@ class PingAndListBucketsSpecs extends RiakSpecs {
       result must beSome.which { _.contains("test_bucket") }
     }
   }
-  
-  
+
+
 
   object charSet {
     val cdata1 = Some("""<meta http-equiv="content-type" content="text/html; charset=UTF-8">""")
