@@ -41,19 +41,18 @@ scalacOptions := Seq(
 )
 
   libraryDependencies ++= {
-    val scalazVersion = "7.1.3"
+    val scalazVersion = "7.1.5"
     Seq(
-      "org.json" % "json" % "20141113",
+      "org.json" % "json" % "20150729",
       "org.scalaz" %% "scalaz-core" % scalazVersion,
       "org.scalaz" %% "scalaz-iteratee" % scalazVersion,
       "org.scalaz" %% "scalaz-effect" % scalazVersion,
       "org.scalaz" %% "scalaz-concurrent" % scalazVersion % "test",
-      "net.liftweb" %% "lift-json-scalaz7" % "3.0-M5-1",
-      "com.basho.riak" % "riak-client" % "2.0.1",
-      "org.apache.commons" % "commons-pool2" % "2.4.1",
-      "org.slf4j" % "slf4j-api" % "1.7.12",
-      "org.specs2" %% "specs2-core" % "3.6.1-20150618235732-d4f57e9" % "test",
-      "org.specs2" %% "specs2-matcher-extra" % "3.6.1-20150618235732-d4f57e9" % "test"
-
+      "net.liftweb" %% "lift-json-scalaz7" % "3.0-M6",
+      "com.basho.riak" % "riak-client" % "2.0.2",
+      "org.apache.commons" % "commons-pool2" % "2.4.2",
+      "org.slf4j" % "slf4j-api" % "1.7.13",
+      "org.specs2" % "specs2-core_2.11" % "3.6.5-20151108070227-1e34889" % "test",
+      "org.specs2" % "specs2-matcher-extra_2.11" % "3.6.5-20151108070227-1e34889" % "test"
       )
     }
